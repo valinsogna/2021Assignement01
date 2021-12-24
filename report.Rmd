@@ -1,0 +1,217 @@
+---
+title: "Assignement 1 Report"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exercise 1
+### Ring
+
+I have implemented an MPI program in C with $2P$ messages passing among $P$ processes on a ring topology with periodic boundaries.
+
+The program implements a stream of messages of $4B$ each, both clockwise and anticlockwise: each process in fact send/receive messages of **type int** (the $rank$) with a tag proportional to the rank ( $tag=rank*10$ ).
+
+When running on $P$ process, the program prints out in folder *./out* a file *'np_*$P$*.txt'* with the following output ordered by rank (here $P=5$):
+
+`I am process 0 and I have received 5 messages. My final messages have tag 0 and value msg-left -10, msg-right 10`
+`I am process 1 and I have received 5 messages. My final messages have tag 10 and value msg-left -10, msg-right 10`
+`I am process 2 and I have received 5 messages. My final messages have tag 20 and value msg-left -10, msg-right 10`
+`I am process 3 and I have received 5 messages. My final messages have tag 30 and value msg-left -10, msg-right 10`
+`I am process 4 and I have received 5 messages. My final messages have tag 40 and value msg-left -10, msg-right 10`
+
+I have used the following routines for message passing among processes:
+
+* `MPI_Isend`: **non-blocking send** routine
+* `MPI_Irecv`: **non-blocking receive** routine
+* `MPI_Wait`: waits for a non-blocking operation to complete
+
+Using latest version of OpenMPI available on ORFEO (openmpi-4.1.1+gnu-9.3.0), I have run the program up to $P=24$ processes on a **thin node with InfiniBand network and native protocol**.
+
+I have taken notes of the runtime (from the first send/receive to the last) when varying the number of processes $P$ by means of the routine `MPI_Wtime()` which returns an elapsed time on the calling process in seconds.
+
+At each run with $P$ processes, for each process I have taken the mean of the **runtime in microseconds** out of **10000** iterations and print it out (along with some statistics) by ranking order on the file *'np_*$P$*.csv'* in folder *./out*, as follows:
+```{r include=FALSE}
+P5_results=read.csv("img/P5_results.csv", header = TRUE)
+7.072714/5
+7.073540/5
+7.072797/5
+7.074060/5
+```
+
+```{r table, echo=FALSE, results='asis'}
+knitr::kable(
+  head(P5_results, 6), booktabs = TRUE,
+  caption = 'Results with P = 5'
+)
+```
+
+Then, by taking for each run with different $P$ only the **maximum value of t_mean** between all processes as measure of the performance, I was able to produce the following plot, running the program with different mappings:
+
+```{r, include=FALSE}
+t_default=read.csv("./section1/mydata/ring/default/results.csv", header = TRUE)
+t_by_socket=read.csv("./section1/mydata/ring/by_socket/results.csv", header = TRUE)
+t_by_node=read.csv("./section1/mydata/ring/by_node/results.csv", header = TRUE)
+t_by_core=read.csv("./section1/mydata/ring/by_core/results.csv", header = TRUE)
+```
+
+```{r, include=FALSE}
+col_default <- "#4885ed"
+col_by_socket <- "#3cba54"
+col_by_node <- "#f4c20d"
+col_by_core <- "#db3236"
+```
+
+```{r, echo=FALSE, fig.align='center'}
+#plotting
+library(ggplot2)
+sp = ggplot(t_default,aes(x=Np,y=mean,color="default")) +
+  scale_x_continuous(name="P processes",breaks=t_default$Np)  +
+  theme(text = element_text(size=12)) +
+  geom_point(size = 4,shape=17) + geom_line()+scale_y_continuous(breaks = seq(0,70,5),name = expression(bold("t ("*mu*"s)")))   +
+  geom_point(data=t_by_core,aes(x=Np,y=mean,color="by_core"),size = 4,shape=17) +
+  geom_line(data=t_by_core,aes(x=Np,y=mean,color="by_core")) +
+  geom_point(data=t_by_socket,aes(x=Np,y=mean,color="by_socket"),size = 4,shape=17) +
+  geom_line(data=t_by_socket,aes(x=Np,y=mean,color="by_socket")) +
+  geom_point(data=t_by_node,aes(x=Np,y=mean,color="by_node"),size = 4,shape=17) +
+  geom_line(data=t_by_node,aes(x=Np,y=mean,color="by_node")) +
+  scale_color_manual(name="Run", values = c(col_by_core, col_by_node, col_by_socket, col_default))+
+  scale_linetype_manual(values=c(1))+
+  labs(title="Ring on THIN node", subtitle="Execution time per slower process vs number of processes") +
+  theme(plot.title = element_text(size = 15, face = "bold",hjust = 0.5,margin = margin(t = 6)), plot.subtitle = element_text(size = 12, hjust = 0.5, margin = margin(t = 4, b = 7), face = "italic"), axis.title = element_text(face = "bold"), legend.text = element_text(margin = margin(t = 7, b = 7, r=6)), axis.title.x = element_text(margin = margin(t = 10, b=6)), axis.title.y = element_text(margin = margin(r = 8,l=6)), axis.text = element_text(color= "#2f3030", face="bold")) +
+  theme(
+#  panel.background = element_rect(fill = "#ebeef0", colour = "#d5dce0",
+#                               size = 2, linetype = "solid"),
+  panel.grid.major = element_line(size = 0.3, linetype = 'solid',
+                                colour = "white"), 
+  panel.grid.minor = element_line(size = 0.17, linetype = 'solid',
+                                colour = "white")
+  )
+
+sp
+
+```
+
+Because of the routines that I have used in the program, **I expect my data to be in compliance with a $P$ double PingPing model**. 
+
+By means of **IMB-MPI1 PingPing benchmark** it's possible to measure startup $\Delta t$ and throughput $\frac{X}{\Delta t}$ of single messages of size $X$ that are obstructed by oncoming messages. To achieve this, two processes communicate with each other using *MPI_Isend/MPI_Recv/MPI_Wait* calls, just like in my program, as follows:
+
+```{r, echo=FALSE, warning=FALSE, message = FALSE, out.width="40%", fig.cap="PingPing Pattern from Intel® MPI Benchmarks User Guide and Ring with P=3.",fig.align='center',fig.show='hold'}
+library(magick)
+ring_ping <- image_read("./img/ring_ping.png")
+ring_ping_with_border <- image_border(ring_ping, "white", "40x10")
+image_write(ring_ping_with_border, "./img/ring_ping_with_border.png")
+knitr::include_graphics(c("./img/pingping.png","./img/ring_ping_with_border.png"))
+```
+
+With IMB-MPI1 PingPing benchmark I was able to estimate the latency $\lambda_{net}$ and bandwidth $b_{net}$ on Infiniband network with different processes mappings: across nodes, sockets and cores.
+Since my $t_{mean}$ is a measure of time in $\mu s$ of a pair of opposite messages passing through all $P$ process till returning back to the original one, $t_{xmsg}=\frac{t_{mean}}{P}$ is the variable accounting for half of the $\Delta t$ time measured from the PingPing benchmark results.
+
+Thus, by taking the inverse of the previous relation $t_{mean}=t_{xmsg}P$, our theoretical model will be $t_{theo}=2\Delta t_{ping}{P}$, where $\Delta t_{ping} = \lambda_{ping} + \frac{4B}{b_{ping}}$ with $\lambda_{ping}$ and $b_{ping}$ estimated by least square method on the PingPing benchmark results.
+
+Hence, the following communication model has been used for plotting my data with the PingPing model:
+
+* $t(P)=2P(\lambda_{core} + \frac{4B}{b_{core}})$ for **core mapping when $P\leq 12$**.
+* $t(P)=2P(\lambda_{socket} + \frac{4B}{b_{socket}})$ for **core mapping when $P=13$**, assuming that the process chosen as representative of my running is the one with the maximum value of $t_{mean}$, hence the one wich is in the other socket farther from the others 12 cores.
+* $t(P)=P(\lambda_{core} + \frac{4B}{b_{core}})+P(\lambda_{socket} + \frac{4B}{b_{socket}})$ for **core mapping when $P>13$**, assuming again that the slower process is the one communicating with the previous core which is in the other socket, and the next core which is inside its socket.
+* $t(P)=2P(\lambda_{socket} + \frac{4B}{b_{socket}})$ for **socket mapping**.
+* $t(P)=2P(\lambda_{core} + \frac{4B}{b_{core}})$ for **node mapping**.
+
+```{r, include=FALSE}
+ring_model_core <- t_by_core
+ring_model_socket <- t_by_socket
+ring_model_node <- t_by_node
+ring_model_node2 <- t_by_node
+core_latency=0.264
+socket_latency=0.485
+node_latency=0.996
+b_core <- 6372.991
+b_socket <- 5530.801
+b_node <- 11945.604
+msg_size <- 4/10^6
+
+msg_size/b_core
+msg_size/b_socket
+msg_size/b_node
+core_latency + (msg_size/b_core)
+socket_latency + (msg_size/b_socket)
+core_jump <- ring_model_core$mean[ring_model_core$Np==13] - ring_model_core$mean[ring_model_core$Np==12]
+ring_model_core$mean[ring_model_core$Np<=12]=ring_model_core$Np[ring_model_core$Np<=12]*(core_latency + (msg_size/b_core))*2
+ring_model_core$mean[ring_model_core$Np>12]=ring_model_core$Np[ring_model_core$Np>12]*(socket_latency + (msg_size/b_socket)) + ring_model_core$Np[ring_model_core$Np>12]*(core_latency + (msg_size/b_core))
+
+ring_model_core$mean[ring_model_core$Np==13]=ring_model_core$Np[ring_model_core$Np==13]*(socket_latency + (msg_size/b_socket))*2
+
+ring_model_socket$mean=ring_model_socket$Np*(socket_latency + (msg_size/b_socket))*2
+
+ring_model_node$mean=ring_model_node$Np*(node_latency + (msg_size/b_node))*2
+
+ring_model_node2$mean=ring_model_node2$Np*(1.35 + (msg_size/b_node))
+```
+
+```{r, echo=FALSE, warning=FALSE, message = FALSE, fig.align='center', out.width="100%"}
+lab_core <- as.character(expression('t(N)'=='2N'*(lambda[cor]+frac(4*'B', b[cor]))))
+lab_core2 <- as.character(expression('t(N)'=='N'*(lambda[cor]+frac(4*'B', b[cor]))+'N'*(lambda[soc]+frac(4*'B', b[soc]))))
+lab_socket <- as.character(expression('t(N)'=='2N'*(lambda[soc]+frac(4*'B', b[soc]))))
+lab_node <- as.character(expression('t(N)'=='2N'*(lambda[nod]+frac(4*'B', b[nod]))))
+lab_node2 <- as.character(expression('t(N)'=='N'*(1.35 +frac(4*'B', b[nod]))))
+
+sp = ggplot(t_by_core,aes(x=Np,y=mean,color="by core",linetype="Exp data"))  +
+  scale_y_continuous(name= expression(bold("t ("*mu*"s)")),breaks = seq(0,45,by=5))+
+  scale_x_continuous(name="P processes",breaks = t_by_core$Np) +
+  geom_point(size = 3,shape=17) + 
+  geom_line()  + 
+  theme(text = element_text(size=10)) +
+  geom_line(data=ring_model_core,aes(x=Np,y=mean,color="by core",linetype="Model")) +    
+  geom_point(data=t_by_socket,aes(x=Np,y=mean,color="by socket"),size = 3,shape=17) +
+  geom_line(data=t_by_socket,aes(x=Np,y=mean,color="by socket",linetype="Exp data"))+
+  geom_line(data=ring_model_socket,aes(x=Np,y=mean,color="by socket",linetype="Model"))+
+  geom_line(data=ring_model_node,aes(x=Np,y=mean,color="by node",linetype="Model"))+
+  geom_point(data=t_by_node,aes(x=Np,y=mean,color="by node"),size = 3,shape=17) +
+  geom_line(data=t_by_node,aes(x=Np,y=mean,color="by node",linetype="Exp data"))+
+  geom_line(data=ring_model_node2,aes(x=Np,y=mean,linetype="Model"), color="#104ec9")+
+  scale_color_manual(name="Run", values = c(col_by_core, col_by_node, col_by_socket, col_default))+
+  scale_linetype_manual(name="Data",values=c(1,2))+
+  geom_text(x = 8, y = 2, label = lab_core, color = col_by_core, size=2, parse = T) + 
+  geom_text(x = 18, y = 10.7, label = lab_core2, color = col_by_core, size=2, parse = T) +
+  geom_text(x = 16, y = 18, label = lab_socket, color = col_by_socket, size=2, parse = T) +
+  geom_text(x = 15, y = 27, label = lab_node, color = "#ffbf00", size=2, parse = T) +
+  geom_text(x = 21, y = 25, label = lab_node2, color = "#104ec9", size=2, parse = T) +
+  theme(plot.title = element_text(size = 12, face = "bold",hjust = 0.5,margin = margin(t = 6)), plot.subtitle = element_text(size = 10, hjust = 0.5, margin = margin(t = 4, b = 7), face = "italic"), axis.title = element_text(face = "bold"), legend.text = element_text(margin = margin(t = 4, b = 4, r=4), size=8), legend.title = element_text(size = 9), axis.title.x = element_text(margin = margin(t = 8, b=6)), axis.title.y = element_text(margin = margin(r = 10,l=8)), axis.text = element_text(color= "#2f3030", face="bold"), plot.caption = element_text(color = "darkblue", face = "italic", size = 10, margin = margin(b =6))) +
+ labs(title="Ring comparison with PingPing model of 4B message", subtitle="Execution time vs number of processes", caption = bquote(paste(lambda[cor], "= ", .(core_latency), ",  ", lambda[soc], "= ", .(socket_latency), ", ",  lambda[nod], "= ", .(node_latency)))) +
+ theme(
+#  panel.background = element_rect(fill = "#ebeef0", colour = "#d5dce0",
+#                               size = 2, linetype = "solid"),
+  panel.grid.major = element_line(size = 0.3, linetype = 'solid',
+                                colour = "white"), 
+  panel.grid.minor = element_line(size = 0.17, linetype = 'solid',
+                                colour = "white")
+  )
+sp
+```
+
+Oss. The extimated bandwiths of the network for the different mappings are:
+
+* $b_{core}$ = 6372.991 MB/s
+* $b_{socket}$ = 5530.801 MB/s
+* $b_{node}$ = 11945.604 MB/s
+
+As expected, the measured bandwith for the 100 Gbit InfiniBand network (process message passing among nodes) reaches up to approximately 12000 MB/s ($= 12$ GB/s $= 12 *8$ Gbit/s $= 96$ Gbit/s) which is $96\%$ of the theoretical peak performance.
+Anyway this term in the model can easily be omitted since it's in the order of $10^{-10}$.
+
+The estimated latency between two nodes $\lambda_{node}$ with the PingPing benchmark is somewhat less than the one declared by Mellanox switch constructor ($1.35$ $\mu s$) used in InfiniBand network: this fact seems to hold when few processes are communicating.
+
+I was indeed expecting that the theoretical performance (evaluated by PingPing benchmark among just 2 process) would have been better than the real scenario when all cores/sockets in nodes are being used simultaneously, and in fact as can be seen from the previous plot, **my model seems to work good for core and socket mapping**, but quite bad for node mapping.
+
+Data from node mapping seem to follow another model that is half the expected one: $t(P)=P(\lambda_{mlx5} + \frac{4B}{b_{node}})$, where $\lambda_{mlx5}=1.35$ is the latency of the Mellanox switch indeed. This may suggest that the *switch is able to send simultaneously 2 messages of $4B$ in each direction of the network, halving the time for message passing* between processes placed in different nodes.
+
+## Exercise 2
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+
+```
+
+
