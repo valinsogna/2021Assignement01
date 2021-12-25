@@ -14,7 +14,7 @@ I have implemented an MPI program in C with $2P$ messages passing among $P$ proc
 
 The program implements a stream of messages of $4B$ each, both clockwise and anticlockwise: each process in fact send/receive messages of **type int** (the $rank$) with a tag proportional to the rank ( $tag=rank*10$ ).
 
-When running on $P$ process, the program prints out in folder *./out* a file *'np_*$P$*.txt'* with the following output ordered by rank (here $P=5$):
+When running on $P$ process, the program prints out in folder *./out* a file *'np*$P$*.txt'* with the following output ordered by rank (here $P=5$):
 
 `I am process 0 and I have received 5 messages. My final messages have tag 0 and value msg-left -10, msg-right 10`
 `I am process 1 and I have received 5 messages. My final messages have tag 10 and value msg-left -10, msg-right 10`
@@ -32,7 +32,7 @@ Using latest version of OpenMPI available on ORFEO (openmpi-4.1.1+gnu-9.3.0), I 
 
 I have taken notes of the runtime (from the first send/receive to the last) when varying the number of processes $P$ by means of the routine `MPI_Wtime()` which returns an elapsed time on the calling process in seconds.
 
-At each run with $P$ processes, for each process I have taken the mean of the **runtime in microseconds** out of **10000** iterations and print it out (along with some statistics) by ranking order on the file *'np_*$P$*.csv'* in folder *./out*, as follows:
+At each run with $P$ processes, for each process I have taken the mean of the **runtime in microseconds** out of **10000** iterations and print it out (along with some statistics) by ranking order on the file *'np*$P$*.csv'* in folder *./out*, as follows:
 ```{r include=FALSE}
 P5_results=read.csv("img/P5_results.csv", header = TRUE)
 7.072714/5
