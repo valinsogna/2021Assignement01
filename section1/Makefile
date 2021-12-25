@@ -23,7 +23,7 @@ clean:
 
 .PHONY: clean
 
-clean_dataring:
+clean_ring:
 	rm -f thin_resources_used.out ||:
 	rm -rf default ||:
 	rm -rf by_core ||:
@@ -31,6 +31,6 @@ clean_dataring:
 	rm -rf by_node ||:
 	find . -type f -name ring.sh.\* -delete ||:
 
-.PHONY: clean_dataring
+.PHONY: clean_ring
 
 

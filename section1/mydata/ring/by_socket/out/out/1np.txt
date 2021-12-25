@@ -1,0 +1,1 @@
+I am process 0 and I have received 1 messages. My final messages have tag 0 and value msg-left 0, msg-right 0
