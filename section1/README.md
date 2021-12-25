@@ -10,13 +10,14 @@ Oss. In folder 'mydata/' there are the data obtained from my measuremnts on the 
 
 To run ring.c submitting a job on a thin node using up to 24 processes (with 3 different mappings: by core, socket, node) simply run the script:
 - `qsub ring.sh`
+
 This script will run the program with different number of processes for each mappings.
 The results and output files csv/txt are available in the subfolders 'out/' inside each 'by_core/', 'by_node/', 'by_socket/', 'default/' folder.
 
 To clean all the measures of the ring.c program just type:
 - `clean_ring`
 
-### Others folder
+## Others folder
 
 There are the supported programs used for the ring exercise, like 'formatter.cpp'.
 It has been used in order to create a csv file list selecting only the time measurements from the slower process among all of a specific run.
