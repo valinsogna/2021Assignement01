@@ -18,7 +18,7 @@ mkdir out
 for i in {1..24}; do 
     mpirun --map-by node --mca btl ^openib -np $i ${EXE}  >> stdout_node$i.txt   
 done
-cat $PBS_NODEFILE >> thin_resources_used.out
+cat $PBS_NODEFILE >> nodes_used.out
 
 cd ..
 cd by_core
@@ -26,7 +26,7 @@ mkdir out
 for i in {1..24}; do 
     mpirun --map-by core --mca btl ^openib -np $i ${EXE}  >> stdout_core$i.txt   
 done
-cat $PBS_NODEFILE >> thin_resources_used.out
+cat $PBS_NODEFILE >> nodes_used.out
 
 cd ..
 cd by_socket
@@ -34,7 +34,7 @@ mkdir out
 for i in {1..24}; do 
     mpirun --map-by socket --mca btl ^openib -np $i ${EXE} >> stdout_socket$i.txt
 done
-cat $PBS_NODEFILE >> thin_resources_used.out
+cat $PBS_NODEFILE >> nodes_used.out
 
 cd ..
 cd default
@@ -42,7 +42,7 @@ mkdir out
 for i in {1..24}; do 
     mpirun --mca btl ^openib -np $i ${EXE} >> stdout_default$i.txt
 done
-cat $PBS_NODEFILE >> thin_resources_used.out
+cat $PBS_NODEFILE >> nodes_used.out
 
 cd ..
 exit
