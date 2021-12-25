@@ -24,7 +24,6 @@ clean:
 .PHONY: clean
 
 clean_ring:
-	rm -f thin_resources_used.out ||:
 	rm -rf default ||:
 	rm -rf by_core ||:
 	rm -rf by_socket ||:

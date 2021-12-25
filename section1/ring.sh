@@ -5,26 +5,26 @@
 
 module load openmpi-4.1.1+gnu-9.3.0
 cd $PBS_O_WORKDIR
+EXE="//fast/dssc/valinsogna/2021Assignement01/section1/ring.x"
+clean_ring
+
 mkdir -p by_node
 mkdir -p by_core
 mkdir -p by_socket
 mkdir -p default
 
-#mpicc ring.c -o ring.x -lm
-#qsub -l nodes=1:ppn=24 -I -l walltime=1:00:00 -q dssc
-
-
 cd by_node
 mkdir out
 for i in {1..24}; do 
-    mpirun --map-by node -np $i --report-bindings ./../../../ring.x   
+    mpirun --map-by node --mca btl ^openib -np $i ${EXE}  >> stdout_node$i.txt   
 done
+cat $PBS_NODEFILE >> thin_resources_used.out
 
-
+cd ..
 cd by_core
 mkdir out
 for i in {1..24}; do 
-    mpirun --map-by core -np $i --report-bindings ./../../ring.x  >> std_out$i.txt   
+    mpirun --map-by core --mca btl ^openib -np $i ${EXE}  >> stdout_core$i.txt   
 done
 cat $PBS_NODEFILE >> thin_resources_used.out
 
@@ -32,7 +32,7 @@ cd ..
 cd by_socket
 mkdir out
 for i in {1..24}; do 
-    mpirun --map-by socket -np $i --report-bindings ./../../ring.x >> std_out$i.txt
+    mpirun --map-by socket --mca btl ^openib -np $i ${EXE} >> stdout_socket$i.txt
 done
 cat $PBS_NODEFILE >> thin_resources_used.out
 
@@ -40,8 +40,9 @@ cd ..
 cd default
 mkdir out
 for i in {1..24}; do 
-    mpirun -np $i --report-bindings ./../../ring.x >> std_out$i.txt
+    mpirun --mca btl ^openib -np $i ${EXE} >> stdout_default$i.txt
 done
-cat $PBS_NODEFILE >> thin_resources_used1.out
+cat $PBS_NODEFILE >> thin_resources_used.out
 
+cd ..
 exit
