@@ -208,10 +208,25 @@ Data from node mapping seem to follow another model that is half the expected on
 
 ## Exercise 2
 
-You can also embed plots, for example:
+In order to measure MPI point to point performance, the Intel MPI benchmarks is used. By Intel's documentation it works as follow:
+
+![PingPong Pattern from Intel® MPI Benchmarks User Guide.](./img/pingpong.png){#id2 .class width=50% height=35% align=center}
+
+The bandwidth and the latency estimate is done across *core*, *socket* and different *node*, combined with differents protocols and hardware devices. Each run is repeated 10 times, **openMPI 4.0.3** is used. Entire node was reserved in order to reduce possible source noise in measurement.
+
+The **pml** involved in the benchmarks are **OB1** and **UCX**. The **btl** used are **tcp** and **vader**. Across node are selected also different network, with different protocols: $25$ Gbit Ethernet and $100$ Gbit InfiniBand throught Mellanox network switch. 
 
 ```{r pressure, echo=FALSE}
 
 ```
 
+The following graphs show the behaviour inside the same node, i.e mapping the processes across two sockets or in the same socket. Mapping the processes in the same socket show of course often a better performance. The behaviour before the asymptotic plateau is strange and show very different performance among different implementation, the main cause is the cache. 
+Before analyzing the performance we need to know more about the node topology. 
 
+![lstopo output on THIN node.](./img/lstopo.png){#idasd .class width=50% height=50% align=center}
+
+Cache sizes are reported on graph with vertical black dashed line. 
+The behaviour appear strange before $16$ MB included, after that size, it is stable beacause the message size is larger than all caches. The larger cache is **L3** with $19$ MB.
+The **L2** effects, become clear after $1$ MB, then all implementations start loosing bandwidth.
+The **L1** effects is not clearly visible from the bandwidth due the latency. To infer with more accuracy about the cache effect we can perform some profiling test using hardware counters. I modified Intel MPI Benchmark PingPong injecting some code in order to inspect L1 data cache misses and L2 cache misses using PAPI. I tracked all cache misses on MPI_Send and MPI_Recv routine of rank 0,after some cicles of warmup. They are reported on absolute value and normalized respect message size.
+Before $128$ KB UCX shows poor performance respect other protocols, after that size there is an huge speed up. This behave will be explained later. Intel InfiniBand also show poor performance respect UCX implementation, this behaviour is explained with cache too. 
