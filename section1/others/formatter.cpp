@@ -7,7 +7,6 @@
 #include <limits>
 #include <cstdlib>
 #include <algorithm>
-#include <bits/stdc++.h>
 #include <sstream>
 
 double getMean(std::string riga){
