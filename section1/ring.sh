@@ -5,7 +5,7 @@
 
 module load openmpi-4.1.1+gnu-9.3.0
 cd $PBS_O_WORKDIR
-EXE="//fast/dssc/valinsogna/2021Assignement01/section1/ring.x"
+EXE="/fast/dssc/valinsogna/2021Assignement01/section1/ring.x"
 clean_ring
 
 mkdir -p by_node

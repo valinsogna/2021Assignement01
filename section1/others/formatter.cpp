@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
 
   std::ifstream fin(filename);
   std::ofstream fout;
-  fout.open("result.csv", std::ios_base::app);
+  fout.open("results.csv", std::ios_base::app);
 
   if(filename[2] == '1' && filename[3] == '.' )
     fout << "rank,Np,mean,mean_permsg,var,s2,N,dev,s"<<std::endl;
