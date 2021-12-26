@@ -1,6 +1,8 @@
 ---
 title: "Assignement 1 Report"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -329,8 +331,8 @@ NUMA node1 CPU(s):     1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41
 
 
 ### Networks and protocols used
-- High Speed Network **100 Gbit InfiniBand**: with $peak$ $perf_{theo}$ of 100 Gbit/s = 12.5 GB/s = **12500 MB/s**;  $(1)$
-- In band management network **25 Gbit Ethernet**: with $peak$ $perf_{theo}$ of 25 Gbit/s = 3.125 GB/s = **3125 MB/s**;   $(2)$
+- High Speed Network **100 Gbit InfiniBand**: with $peak$ $perf_{theo}$ of 100 Gbit/s = 12.5 GB/s = **12500 MB/s**;  eq. $(1)$
+- In band management network **25 Gbit Ethernet**: with $peak$ $perf_{theo}$ of 25 Gbit/s = 3.125 GB/s = **3125 MB/s**;   eq. $(2)$
 
 The main differences among these two are the usage of Sockets Interface and TCP/IP protocol for the Ethernet network, and the usage of much more rapid OpenFabrics Verbs (no Kernel stack) with the native IB protocol for InfiniBand network.
 Moreover, IB protocol has RDMA (Remote Direct Memory Access) that makes InfiniBand faster: it is an operation which access the memory directly  without involving the CPU.
@@ -418,10 +420,10 @@ knitr::include_graphics("./img/devices.png")
 Intel MPI benchmark IMB-MPI1 PingPong measure message passing between two processes and works as follow:
 
 ```{r, echo=FALSE, out.width="35%", fig.cap="PingPong Pattern from Intel® MPI Benchmarks User Guide", fig.align='center'}
-knitr::include_graphics("./img/pingping.png")
+knitr::include_graphics("./img/pingpong.png")
 ```
 
-It reports the time $\Delta t$ (in $\mu s$), throughput $\frac{X}{\Delta t}$ (in MB/s), number of repetitions and the message size $X$ (in B) in the standard output:
+It reports the time $\Delta t/2$ (in $\mu s$), throughput $\frac{2X}{\Delta t}$ (in MB/s), number of repetitions and the message size $X$ (in B) in the standard output:
 
 ```{bash eval=FALSE}
 #---------------------------------------------------
@@ -447,12 +449,12 @@ The nodes involved are:
 * ct1pg-gnode001, gpu node for results across cores, sockets and nodes.
 * ct1pg-gnode003, gpu node for results across nodes.
 
-**Each specific run is repeated 10 times** with `-msglog 28` and each time the entire node was reserved in order to reduce noise in measurements. Thus, from the measurements, it was taken the mean time $\Delta t$ and the mean throughput $X/\Delta t$ between the 10 results for each message size $X$, along with some statistics (ex. maximum error on time and on throughput $e_t = \frac{\Delta t_{max} - \Delta t_{min}}{2}$).
+**Each specific run is repeated 10 times** with `-msglog 28` and each time **for the thin ones the entire node was reserved** in order to reduce noise in measurements, **instead for the gpu nodes it wasn't possible due to some queue traffic**. Thus, from the measurements, it was taken the mean time $\Delta t/2$ and the mean throughput $2X/\Delta t$ between the 10 results for each message size $X$, along with some statistics (ex. maximum error on time and on throughput $e = \frac{t_{max} - t_{min}}{2}$).
 
 The PingPong benchmark is compiled on either the thin or gpu node using two different libraries:
 
 * **OpenMPI**: version **openmpi-4.0.3** for the running across nodes with `UCX_NET_DEVICES` specification and latest **openmpi-4.1.1** for the others.
-* **Intel**: version `intel` available on ORFEO.
+* **Intel MPI**: version `intel` available on ORFEO.
 
 With **OpenMPI** implementation it is possible to specify the MPI frameworks and plugins (like pml and btl) that can be used while running. 
 Across nodes, cores and sockets the following as been tested:
@@ -460,7 +462,11 @@ Across nodes, cores and sockets the following as been tested:
 * *PML* : **ob1** and **ucx**. 
 * *BTL* : **tcp**, **self** and **vader**. 
 
-The following graphs show the behaviour inside the same node, i.e mapping the processes across two sockets or in the same socket. Mapping the processes in the same socket show of course often a better performance. The behaviour before the asymptotic plateau is strange and show very different performance among different implementation, the main cause is the cache. 
+The following graphs show the results both for thin and gpu nodes from plotting the benchmark throupout $2X/\Delta t$ against the message size $X$ with different mappings of the processes: across two different nodes for the first plot and across two sockets or in the same socket for the latter. 
+
+Along with the results of 'across nodes' mapping, there has been drawn the lines for the 100 Gbit InfiniBand and 25 Gbit Ethernet, in order to compare the theoretical peak performances with the tested ones.
+
+Moreover, in the plot 'by socket/core' mapping, cache size lines have been drawn too in order to discuss about a general behavior.
 
 
 ```{r, include=FALSE}
@@ -565,6 +571,14 @@ sp
 
 ```
 
+From this first plot it is evident that **with Intel MPI, UCX OpenMPI InfiniBand** (the default command) **and UCX native IB with mlx5_0:1** device (which is the same as the previous), **the asymptotic bandwith is very high compared to the others protocols/devices and similar to the one expected from the theoretical peak**: more or less my data  **perform like $97\%$ of the theoretical limit** (see eq (2) ).
+
+**UCX with br0 and OB1 with tcp** show a real maximum performance of **about 86%-89% respectively of theoretical bandwidth**: it is a good result if we take into account that tcp protocol is heavier with respect to the native IB one (encoding, no RDMA available). Their latencies are comparable (see table in 'Results' section), but OB1 has a highier bandwidth.
+
+**IPoIB** (aka UCX ib0) happen to have a good latency (see table in 'Results' section) but the bandwidth is not so high and in fact it is comparable to the one of the 25 Gbit Ethernet network.
+
+Now let's look at the performance with the across core and socket configuration.
+
 ```{r, echo=FALSE, warning=FALSE, message = FALSE, fig.align='center'}
 #plotting BY CORE/SOCKET openmpi e intel - THIN bandwith
 library(ggplot2)
@@ -617,6 +631,22 @@ sp
 
 ```
 
+From first glance it is clear that these performance are smaller in bandwith, but better in latency (see table in 'Report section') when compared to across nodes configuration. Moreover, **mapping the processes in the same socket show often a better performance than mapping them in separate sockets **. 
+
+The drop in bandwidth before the asymptotic plateau of throughput is common in both the 2 configurations (by sockets, by nodes) and it shows very different performances among different implementations.
+**This pattern happens between 32KB and 16 MB included: after that size, measurements become stable**.
+
+By plotting the cache lines it is clear that this behavior **must be related to the cache**: in fact, when the size of the PingPong message becomes too large to fit in **L1**, there's an L1 miss and data are retrieved from cache **L2**. This happens too for L2 as the size grows so there is a visible drop in the throughput.
+L1 effects is not clearly visible from the bandwidth ( probably due the latency ), instead for L2 misses after $1$ MB, all implementations start loosing bandwidth.
+In the plateau area, instead, the message size is larger than all caches and a stable bandwith is reached.
+
+Now let's compare protocols.
+Firstly, **UCX IB shows poor performance before 131 MB** respect to the other protocols and after that size there is an huge increase.
+**Also Intel InfiniBand, this time shows poor performance respect UCX implementation**, and it might be related to the fact that it undergoes large cache misses.
+**OB1** implementation seems to be better by usage of *vader* btl rather than *tcp*, as expected since *vader* is suitable for shared memory transfer.
+
+Now let's have a look at the GPU results in terms of throughput.
+
 ```{r, echo=FALSE, warning=FALSE, message = FALSE, fig.align='center'}
 #plotting BY NODE openmpi e intel - GPU bandwith
 library(ggplot2)
@@ -658,6 +688,12 @@ sp = ggplot(node_ib_gpu,aes(x=X.bytes,y=mbs,color="UCX IB")) +
 sp 
 
 ```
+
+As can be inferred from the previous plot, Gpu nodes behave like thin node, no major difference pops out, but **GPU node is a bit slower (about 15%) ** than thin node, *as already discovered in the exercise 1*.
+
+This can be caused either by the fact that not being able to reverse a whole node (if not 2 in the across node configuration) or, more likely, by the different CPU frequencies and node configurations: remember that even if gpu CPU has a theoretical higher maximum frequency (2.70GHz) with respect to the one of the thin node (2.60GHz), these frequencies are much smaller when running simultaneously on several cores.
+
+Cache size are the same as thin node, then cache effects are similar, as it is shown here:
 
 ```{r, echo=FALSE, warning=FALSE, message = FALSE, fig.align='center'}
 #plotting BY CORE/SOCKET openmpi e intel - GPU bandwith
@@ -710,20 +746,27 @@ sp
 
 ```
 
-Cache sizes are reported on graph with vertical black dashed line. 
-The behaviour appear strange before $16$ MB included, after that size, it is stable beacause the message size is larger than all caches. The larger cache is **L3** with $19$ MB.
-The **L2** effects, become clear after $1$ MB, then all implementations start loosing bandwidth.
-The **L1** effects is not clearly visible from the bandwidth due the latency. To infer with more accuracy about the cache effect we can perform some profiling test using hardware counters. I modified Intel MPI Benchmark PingPong injecting some code in order to inspect L1 data cache misses and L2 cache misses using PAPI. I tracked all cache misses on MPI_Send and MPI_Recv routine of rank 0,after some cicles of warmup. They are reported on absolute value and normalized respect message size.
-Before $128$ KB UCX shows poor performance respect other protocols, after that size there is an huge speed up. This behave will be explained later. Intel InfiniBand also show poor performance respect UCX implementation, this behaviour is explained with cache too. 
-
-From first graph, now Intel implementation behaviour is clear, it has the largest cache misses number among all other configurations. The bandwidth spike of **UCX** after $128$ KB, can be explained by **L1** and **L2** drop in terms of cache misses. **OB1** implementation seems be the most cache friendly *PML*.  Disclamer: those graphs must used in qualitative way and not in quantitative way. 
-
 ### Results
 
-UCX with InfiniBand and Intel show the best performances among over all configurations in terms of latency and bandwidth. UCX overperform a bit Intel latency. No big cache effects are visible thanks to  RDMA that exclude all caches, CPU and kernel action, this explain also the highest possible bandwidth respect core and socket mapping. Real InfiniBand performance is about $95\%$ of theoretical bandwidth, is a very nice result assuming the encoding $64b/66b$.
+Here are shown the estimation via least square methods of the latency $\lambda_{net}$ and bandwidth $b_{net}$ of the networks used.
 
-UCX with br0 and OB1 with tcp show comparable latency, but OB1 gain a better bandwidth. The real maximum performance is about $85\%$ of theoretical bandwidth, this is a good result taking into account the heavier tcp protocol respect InfiniBand (ACK,handshake, encoding...). There is then transport overhead and some inefficency introduced by the cache and CPU (no RDMA available).
+# Exercise 3
+## Jacobi solver - Performance model
+In order to predict Jacobi model performance the following model is used:
+$$P(L,N)=\frac{L^3N}{T_s+T_c}\space [MLUP/s]$$
+$L$ represent sub domain size (assuming it as cube), for us it is a constant. $N$ represent the processes number. The $L^3N$ quantity thus is considered the problem size, this amount of work is increased linearly in function of $N$, this is a weak scalability. About measure unit: performance is evaluated using $MLUP/s$, mega lactic update per sec.
 
-IPoIB has a good latency (no Ethernet switch involved) but the bandwidth is not so high as expected. 
-Gpu nodes behave like thin node, no difference are visible, GPU node is a bit slower than thin node, this can be caused by different CPU frequency and node configuration. Cache size are same as thin node, then cache effects are similar. Follow on next page a summary of fitting results on THIN and GPU node.
+$T_s$ is time swept, is constant and can be estimated using the serial output.
+
+$T_c$ represent the communication time in seconds. This quantity can be modeled simple estimating the latency $\lambda$, bandwidth $B$ and messages size $C$.
+
+$$T_c=\frac{C}{B}+4k\lambda\space[seconds]$$
+About $C$,assuming grid point as double:
+$$C=L^2k\cdot2\cdot2\cdot8\space[byte]$$
+About $k$: this quantity represent the number of directions in which the halo exchange occurs, it must be multiplied by $2$ taking into account the bidirectional halo exchange and again by two taking into account the positive and negative direction.
+
+## Domain decomposition
+
+Several domain decompositions are possible, a priory some of them can be discarded assuming poor performance due buffering, as example between $(12,1,1)$ $(1,12,1)$ $(1,1,12)$, the first one is the better and more memory friendly decomposition, it has the lowest buffering needs. This can be proved experimentally, the first configuration behave better than the other in terms of MLUP/s.
+
 
