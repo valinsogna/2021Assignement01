@@ -1,0 +1,374 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+node_ib=read.csv("openmpi_lib/node_ib.out.csv", header = TRUE)
+node_ob1_tcp=read.csv("openmpi_lib/node_ob1_selftcp.out.csv", header = TRUE)
+node_ucx_br0=read.csv("openmpi_lib/node_ucx_br0.out.csv", header = TRUE)
+node_ucx_ib0=read.csv("openmpi_lib/node_ucx_ib0.out.csv", header = TRUE)
+node_ucx__mlx5=read.csv("openmpi_lib/node_ucx_mlx5.out.csv", header = TRUE)
+
+socket_ib=read.csv("openmpi_lib/socket_ib.out.csv", header = TRUE)
+socket_ob1_tcp=read.csv("openmpi_lib/socket_ob1_selftcp.out.csv", header = TRUE)
+socket_ob1_vader=read.csv("openmpi_lib/socket_ob1_selfvader.out.csv", header = TRUE)
+
+core_ib=read.csv("openmpi_lib/core_ib.out.csv", header = TRUE)
+core_ob1_tcp=read.csv("openmpi_lib/core_ob1_selftcp.out.csv", header = TRUE)
+core_ob1_vader=read.csv("openmpi_lib/core_ob1_selfvader.out.csv", header = TRUE)
+
+```
+
+```{r}
+socket_ib_gpu=read.csv("openmpi_lib_gpu/socket_ib.out.csv", header = TRUE)
+socket_ob1_tcp_gpu=read.csv("openmpi_lib_gpu/socket_ob1_selftcp.out.csv", header = TRUE)
+socket_ob1_vader_gpu=read.csv("openmpi_lib_gpu/socket_ob1_selfvader.out.csv", header = TRUE)
+
+core_ib_gpu=read.csv("openmpi_lib_gpu/core_ib.out.csv", header = TRUE)
+core_ob1_tcp_gpu=read.csv("openmpi_lib_gpu/core_ob1_selftcp.out.csv", header = TRUE)
+core_ob1_vader_gpu=read.csv("openmpi_lib_gpu/core_ob1_selfvader.out.csv", header = TRUE)
+```
+
+```{r}
+node_ib_intel_lib=read.csv("intel_lib/node_ib_intel_lib.out.csv", header = TRUE)
+socket_ib_intel_lib=read.csv("intel_lib/socket_ib_intel_lib.csv", header = TRUE)
+core_ib_intel_lib=read.csv("intel_lib/core_ib_intel_lib.csv", header = TRUE)
+```
+
+```{r}
+socket_ib_intel_lib_gpu=read.csv("intel_lib_gpu/socket_ib_intel_lib.out.csv", header = TRUE)
+core_ib_intel_lib_gpu=read.csv("intel_lib_gpu/core_ib_intel_lib.out.csv", header = TRUE)
+```
+
+
+```{r, dpi=600, fig.width=10, fig.height=6}
+#plotting openmpi_lib 
+library(ggplot2)
+sp = ggplot(core_ib,aes(x=X.bytes,y=mbs,color="UCX IB",linetype="Core")) +
+  scale_x_continuous(trans='log2',name="Message Size Bytes",breaks=core_ib$X.bytes)  +
+  geom_point() + geom_line()+scale_y_continuous(breaks = seq(0,25000,1000),name="MB/s")   +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  geom_point(data=core_ob1_tcp,aes(x=X.bytes,y=mbs,color="OB1 tcp")) +
+  geom_line(data=core_ob1_tcp,aes(x=X.bytes,y=mbs,color="OB1 tcp",linetype="Core")) +
+  geom_point(data=core_ob1_vader,aes(x=X.bytes,y=mbs,color="OB1 vader")) +
+  geom_line(data=core_ob1_vader,aes(x=X.bytes,y=mbs,color="OB1 vader",linetype="Core")) +
+  geom_point(data=socket_ib,aes(x=X.bytes,y=mbs,color="UCX IB")) +
+  geom_line(data=socket_ib,aes(x=X.bytes,y=mbs,color="UCX IB",linetype="Socket")) +
+  geom_point(data=socket_ob1_tcp,aes(x=X.bytes,y=mbs,color="OB1 tcp")) +
+  geom_line(data=socket_ob1_tcp,aes(x=X.bytes,y=mbs,color="OB1 tcp",linetype="Socket")) +
+  geom_point(data=socket_ob1_vader,aes(x=X.bytes,y=mbs,color="OB1 vader")) +
+  geom_line(data=socket_ob1_vader,aes(x=X.bytes,y=mbs,color="OB1 vader",linetype="Socket")) +
+  geom_point(data=socket_ib_intel_lib,aes(x=X.bytes,y=mbs,color="intel_lib IB")) +
+  geom_line(data=socket_ib_intel_lib,aes(x=X.bytes,y=mbs,color="intel_lib IB",linetype="Socket")) +
+  geom_point(data=core_ib_intel_lib,aes(x=X.bytes,y=mbs,color="intel_lib IB")) +
+  geom_line(data=core_ib_intel_lib,aes(x=X.bytes,y=mbs,color="intel_lib IB",linetype="Core"))+
+  scale_color_manual(name="Protocol", values = c("#F8766D", "#7CAE00", "#00BFC4" ,"#C77CFF"))+
+  scale_linetype_manual(name="Mapping",values=c(1,2))
+
+
+
+sp
+
+```
+
+```{r, dpi=600, fig.width=10, fig.height=6}
+#plotting openmpi_lib 
+library(ggplot2)
+sp = ggplot(node_ib,aes(x=X.bytes,y=mbs,color="node_ib")) + scale_x_continuous(trans='log2',name="Message Size Bytes",breaks=core_ib$X.bytes)+scale_y_continuous(breaks = seq(0,13000,500))  + geom_point() + geom_line()  + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + geom_point(data=node_ob1_tcp,aes(x=X.bytes,y=mbs,color="node_ob1_tcp")) + geom_line(data=node_ob1_tcp,aes(x=X.bytes,y=mbs,color="node_ob1_tcp"))+ geom_point(data=node_ucx_br0,aes(x=X.bytes,y=mbs,color="node_ucx_br0")) + geom_line(data=node_ucx_br0,aes(x=X.bytes,y=mbs,color="node_ucx_br0")) + geom_point(data=node_ucx_ib0,aes(x=X.bytes,y=mbs,color="node_ucx_ib0")) + geom_line(data=node_ucx_ib0,aes(x=X.bytes,y=mbs,color="node_ucx_ib0")) + geom_point(data=node_ib_intel_lib,aes(x=X.bytes,y=mbs,color="node_ib_intel_lib")) + geom_line(data=node_ib_intel_lib,aes(x=X.bytes,y=mbs,color="node_ib_intel_lib")) 
+  sp 
+
+```
+```{r, dpi=600, fig.width=10, fig.height=6}
+#plotting openmpi_lib 
+sp = ggplot(core_ib_gpu,aes(x=X.bytes,y=mbs,color="UCX IB",linetype="Core")) +
+  scale_x_continuous(trans='log2',name="Message Size Bytes",breaks=core_ib$X.bytes)  +
+  geom_point() + geom_line()+scale_y_continuous(breaks = seq(0,25000,1000),name="MB/s")   +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  geom_point(data=core_ob1_tcp_gpu,aes(x=X.bytes,y=mbs,color="OB1 tcp")) +
+  geom_line(data=core_ob1_tcp_gpu,aes(x=X.bytes,y=mbs,color="OB1 tcp",linetype="Core")) +
+  geom_point(data=core_ob1_vader_gpu,aes(x=X.bytes,y=mbs,color="OB1 vader")) +
+  geom_line(data=core_ob1_vader_gpu,aes(x=X.bytes,y=mbs,color="OB1 vader",linetype="Core")) +
+  geom_point(data=socket_ib_gpu,aes(x=X.bytes,y=mbs,color="UCX IB")) +
+  geom_line(data=socket_ib_gpu,aes(x=X.bytes,y=mbs,color="UCX IB",linetype="Socket")) +
+  geom_point(data=socket_ob1_tcp_gpu,aes(x=X.bytes,y=mbs,color="OB1 tcp")) +
+  geom_line(data=socket_ob1_tcp_gpu,aes(x=X.bytes,y=mbs,color="OB1 tcp",linetype="Socket")) +
+  geom_point(data=socket_ob1_vader_gpu,aes(x=X.bytes,y=mbs,color="OB1 vader")) +
+  geom_line(data=socket_ob1_vader_gpu,aes(x=X.bytes,y=mbs,color="OB1 vader",linetype="Socket")) +
+  geom_point(data=socket_ib_intel_lib_gpu,aes(x=X.bytes,y=mbs,color="intel_lib IB")) +
+  geom_line(data=socket_ib_intel_lib_gpu,aes(x=X.bytes,y=mbs,color="intel_lib IB",linetype="Socket")) +
+  geom_point(data=core_ib_intel_lib_gpu,aes(x=X.bytes,y=mbs,color="intel_lib IB")) +
+  geom_line(data=core_ib_intel_lib_gpu,aes(x=X.bytes,y=mbs,color="intel_lib IB",linetype="Core"))+
+  scale_color_manual(name="Protocol", values = c("#F8766D", "#7CAE00", "#00BFC4" ,"#C77CFF"))+
+  scale_linetype_manual(name="Mapping",values=c(1,2))
+
+
+
+sp
+
+```
+
+```{r, dpi=600, fig.width=10, fig.height=6}
+ob1_core=read.csv("/home/nt/Scrivania/mpi-benchmarks/cache/ob1_core.csv", header = TRUE)
+ob1_socket=read.csv("/home/nt/Scrivania/mpi-benchmarks/cache/ob1_socket.csv", header = TRUE)
+
+ob1_core$L1=ob1_core$L1/ob1_core$ITER
+ob1_core$L2=ob1_core$L2/ob1_core$ITER
+
+ob1_socket$L1=ob1_socket$L1/ob1_core$ITER
+ob1_socket$L2=ob1_socket$L2/ob1_core$ITER
+
+
+
+ucx_core=read.csv("/home/nt/Scrivania/mpi-benchmarks/cache/ucx_core.csv", header = TRUE)
+ucx_socket=read.csv("/home/nt/Scrivania/mpi-benchmarks/cache/ucx_socket.csv", header = TRUE)
+
+ucx_core$L1=ucx_core$L1/ucx_core$ITER
+ucx_core$L2=ucx_core$L2/ucx_core$ITER
+
+ucx_socket$L1=ucx_socket$L1/ucx_socket$ITER
+ucx_socket$L2=ucx_socket$L2/ucx_socket$ITER
+
+
+intel_lib_core=read.csv("/home/nt/Scrivania/mpi-benchmarks/cache/intel_lib_core.csv", header = TRUE)
+intel_lib_socket=read.csv("/home/nt/Scrivania/mpi-benchmarks/cache/intel_lib_socket.csv", header = TRUE)
+
+intel_lib_core$L1=intel_lib_core$L1/intel_lib_core$ITER
+intel_lib_core$L2=intel_lib_core$L2/intel_lib_core$ITER
+
+intel_lib_socket$L1=intel_lib_socket$L1/intel_lib_core$ITER
+intel_lib_socket$L2=intel_lib_socket$L2/intel_lib_core$ITER
+```
+
+```{r, dpi=600, fig.width=10, fig.height=6}
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length = n + 1)
+  hcl(h = hues, l = 65, c = 100)[1:n]
+}
+
+sp = ggplot(ob1_core,aes(x=X.SIZE,y=L1,color="L1 miss OB1",linetype="Core")) +
+  scale_x_continuous(trans='log2',name="Message Size Bytes",breaks=ob1_core$X.SIZE) +
+  geom_point() +
+  geom_line()  +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_continuous(trans='log2',name="Log(Cache miss)") +
+  geom_point(data=ob1_core,aes(x=X.SIZE,y=L2,color="L2 miss OB1")) +
+  geom_line(data=ob1_core,aes(x=X.SIZE,y=L2,color="L2 miss OB1",linetype="Core"))  +
+  geom_point(data=ob1_socket,aes(x=X.SIZE,y=L1,color="L1 miss OB1")) +
+  geom_line(data=ob1_socket,aes(x=X.SIZE,y=L1,color="L1 miss OB1",linetype="Socket")) +  
+  geom_point(data=ob1_socket,aes(x=X.SIZE,y=L2,color="L2 miss OB1")) +
+  geom_line(data=ob1_socket,aes(x=X.SIZE,y=L2,color="L2 miss OB1",linetype="Socket")) +
+  geom_point(data=ucx_socket,aes(x=X.SIZE,y=L1,color="L1 miss UCX"))+
+  geom_line(data=ucx_socket,aes(x=X.SIZE,y=L1,color="L1 miss UCX",linetype="Socket")) +
+  geom_point(data=ucx_socket,aes(x=X.SIZE,y=L2,color="L2 miss UCX")) + 
+  geom_line(data=ucx_socket,aes(x=X.SIZE,y=L2,color="L2 miss UCX",linetype="Socket")) + 
+  geom_point(data=ucx_core,aes(x=X.SIZE,y=L2,color="L2 miss UCX")) + 
+  geom_line(data=ucx_core,aes(x=X.SIZE,y=L2,color="L2 miss UCX",linetype="Core"))+
+  geom_point(data=ucx_core,aes(x=X.SIZE,y=L1,color="L1 miss UCX")) + 
+  geom_line(data=ucx_core,aes(x=X.SIZE,y=L1,color="L1 miss UCX",linetype="Core"))  +
+  geom_point(data=intel_lib_core,aes(x=X.SIZE,y=L1,color="L1 miss intel_lib")) + 
+  geom_line(data=intel_lib_core,aes(x=X.SIZE,y=L1,color="L1 miss intel_lib",linetype="Core"))  +
+  geom_point(data=intel_lib_core,aes(x=X.SIZE,y=L2,color="L2 miss intel_lib")) + 
+  geom_line(data=intel_lib_core,aes(x=X.SIZE,y=L2,color="L2 miss intel_lib",linetype="Core"))  +
+  geom_point(data=intel_lib_socket,aes(x=X.SIZE,y=L1,color="L1 miss intel_lib")) + 
+  geom_line(data=intel_lib_socket,aes(x=X.SIZE,y=L1,color="L1 miss intel_lib",linetype="Socket"))  +
+  geom_point(data=intel_lib_socket,aes(x=X.SIZE,y=L2,color="L2 miss intel_lib")) + 
+  geom_line(data=intel_lib_socket,aes(x=X.SIZE,y=L2,color="L2 miss intel_lib",linetype="Socket"))  +       
+
+  scale_color_manual(name="Protocol", values = c( "#F8766D", "#B79F00" ,"#00BA38", "#00BFC4", "#619CFF" ,"#F564E3"))+
+  scale_linetype_manual(name="Mapping",values=c(1,2)) 
+
+
+sp
+
+```
+
+
+
+
+
+
+
+
+
+```{r, dpi=600, fig.width=10, fig.height=6}
+sp = ggplot(ob1_core,aes(x=X.SIZE,y=L1,color="L1 miss OB1",linetype="Core")) +
+  scale_x_continuous(trans='log2',name="Message Size Bytes",breaks=ob1_core$X.SIZE) +
+  geom_point() +
+  geom_line()  +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_continuous(trans='log2',name="Log(Cache miss)") +
+  geom_point(data=ob1_core,aes(x=X.SIZE,y=L2,color="L2 miss OB1")) +
+  geom_line(data=ob1_core,aes(x=X.SIZE,y=L2,color="L2 miss OB1",linetype="Core"))  +
+  geom_point(data=ob1_socket,aes(x=X.SIZE,y=L1,color="L1 miss OB1")) +
+  geom_line(data=ob1_socket,aes(x=X.SIZE,y=L1,color="L1 miss OB1",linetype="Socket")) +  
+  geom_point(data=ob1_socket,aes(x=X.SIZE,y=L2,color="L2 miss OB1")) +
+  geom_line(data=ob1_socket,aes(x=X.SIZE,y=L2,color="L2 miss OB1",linetype="Socket")) +
+  geom_point(data=ucx_socket,aes(x=X.SIZE,y=L1,color="L1 miss UCX"))+
+  geom_line(data=ucx_socket,aes(x=X.SIZE,y=L1,color="L1 miss UCX",linetype="Socket")) +
+  geom_point(data=ucx_socket,aes(x=X.SIZE,y=L2,color="L2 miss UCX")) + 
+  geom_line(data=ucx_socket,aes(x=X.SIZE,y=L2,color="L2 miss UCX",linetype="Socket")) + 
+  geom_point(data=ucx_core,aes(x=X.SIZE,y=L2,color="L2 miss UCX")) + 
+  geom_line(data=ucx_core,aes(x=X.SIZE,y=L2,color="L2 miss UCX",linetype="Core"))+
+  geom_point(data=ucx_core,aes(x=X.SIZE,y=L1,color="L1 miss UCX")) + 
+  geom_line(data=ucx_core,aes(x=X.SIZE,y=L1,color="L1 miss UCX",linetype="Core")) +      
+
+  scale_color_manual(name="Protocol", values = c( "#F8766D", "#B79F00" ,"#00BA38", "#00BFC4"))+
+  scale_linetype_manual(name="Mapping",values=c(1,2)) 
+
+
+sp
+
+```
+
+```{r, dpi=600, fig.width=10, fig.height=6}
+ob1_core_send=read.csv("/home/nt/Scrivania/mpi-benchmarks/cache/send/ob1_send_core.csv", header = TRUE)
+ob1_socket_send=read.csv("/home/nt/Scrivania/mpi-benchmarks/cache/send/ob1_send_socket.csv", header = TRUE)
+
+ob1_core_send$L1=ob1_core_send$L1/ob1_core_send$ITER
+ob1_core_send$L2=ob1_core_send$L2/ob1_core_send$ITER
+
+ob1_socket_send$L1=ob1_socket_send$L1/ob1_core_send$ITER
+ob1_socket_send$L2=ob1_socket_send$L2/ob1_core_send$ITER
+
+ucx_core_send=read.csv("/home/nt/Scrivania/mpi-benchmarks/cache/send/ucx_send_core.csv", header = TRUE)
+ucx_socket_send=read.csv("/home/nt/Scrivania/mpi-benchmarks/cache/send/ucx_send_socket.csv", header = TRUE)
+
+ucx_core_send$L1=ucx_core_send$L1/ucx_core_send$ITER
+ucx_core_send$L2=ucx_core_send$L2/ucx_core_send$ITER
+
+ucx_socket_send$L1=ucx_socket_send$L1/ucx_core_send$ITER
+ucx_socket_send$L2=ucx_socket_send$L2/ucx_core_send$ITER
+
+sp = ggplot(ob1_core_send,aes(x=X.SIZE,y=L1,color="L1 miss OB1",linetype="Core")) +
+  scale_x_continuous(trans='log2',name="Message Size Bytes",breaks=ob1_core$X.SIZE) +
+  geom_point() +
+  geom_line()  +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_continuous(trans='log2',name="Log(Cache miss)") +
+  geom_point(data=ob1_core_send,aes(x=X.SIZE,y=L2,color="L2 miss OB1")) +
+  geom_line(data=ob1_core_send,aes(x=X.SIZE,y=L2,color="L2 miss OB1",linetype="Core"))  +
+  geom_point(data=ob1_socket_send,aes(x=X.SIZE,y=L1,color="L1 miss OB1")) +
+  geom_line(data=ob1_socket_send,aes(x=X.SIZE,y=L1,color="L1 miss OB1",linetype="Socket")) +  
+  geom_point(data=ob1_socket_send,aes(x=X.SIZE,y=L2,color="L2 miss OB1")) +
+  geom_line(data=ob1_socket_send,aes(x=X.SIZE,y=L2,color="L2 miss OB1",linetype="Socket")) +
+  geom_point(data=ucx_socket_send,aes(x=X.SIZE,y=L1,color="L1 miss UCX"))+
+  geom_line(data=ucx_socket_send,aes(x=X.SIZE,y=L1,color="L1 miss UCX",linetype="Socket")) +
+  geom_point(data=ucx_socket_send,aes(x=X.SIZE,y=L2,color="L2 miss UCX")) + 
+  geom_line(data=ucx_socket_send,aes(x=X.SIZE,y=L2,color="L2 miss UCX",linetype="Socket")) + 
+  geom_point(data=ucx_core_send,aes(x=X.SIZE,y=L2,color="L2 miss UCX")) + 
+  geom_line(data=ucx_core_send,aes(x=X.SIZE,y=L2,color="L2 miss UCX",linetype="Core"))+
+  geom_point(data=ucx_core_send,aes(x=X.SIZE,y=L1,color="L1 miss UCX")) + 
+  geom_line(data=ucx_core_send,aes(x=X.SIZE,y=L1,color="L1 miss UCX",linetype="Core")) +      
+
+  scale_color_manual(name="Protocol", values = c( "#F8766D", "#B79F00" ,"#00BA38", "#00BFC4"))+
+  scale_linetype_manual(name="Mapping",values=c(1,2)) 
+
+
+sp
+```
+
+```{r, dpi=600, fig.width=10, fig.height=6}
+
+ring_core=read.csv("/home/nt/Scrivania/ass2021/ring/core.csv", header = TRUE)
+ring_socket=read.csv("/home/nt/Scrivania/ass2021/ring/socket.csv", header = TRUE)
+ring_node=read.csv("/home/nt/Scrivania/ass2021/ring/node.csv", header = TRUE)
+
+ring_model_core=ring_core
+ring_model_socket=ring_socket
+ring_model_node=ring_node
+
+core_latency=0.23
+socket_latency=0.50
+node_latency=1.35
+
+ring_model_core$MEAN[ring_model_core$X.SIZE<=12]=ring_model_core$X.SIZE[ring_model_core$X.SIZE<=12]*core_latency*2
+ring_model_core$MEAN[ring_model_core$X.SIZE>12]=ring_model_core$X.SIZE[ring_model_core$X.SIZE>12]*socket_latency+ring_model_core$X.SIZE[ring_model_core$X.SIZE>12]*core_latency
+ring_model_core$MEAN[ring_model_core$X.SIZE==13]=ring_model_core$X.SIZE[ring_model_core$X.SIZE==13]*socket_latency*2
+
+ring_model_socket$MEAN=ring_model_socket$X.SIZE*socket_latency*2
+
+
+ring_model_node$MEAN=ring_model_node$X.SIZE*node_latency
+
+
+
+sp = ggplot(ring_core,aes(x=X.SIZE,y=MEAN,color="Map by core",linetype="Real time"))  +
+  scale_y_continuous(name="Time uSec",breaks = seq(0,45,by=5))+
+  scale_x_continuous(name="Processor number",breaks = ring_core$X.SIZE) +
+  geom_point() + 
+  geom_line()  + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5))+
+  geom_point(data=ring_model_core,aes(x=X.SIZE,y=MEAN,color="Map by core"))+
+  geom_line(data=ring_model_core,aes(x=X.SIZE,y=MEAN,color="Map by core",linetype="Theoretical time")) +    
+  geom_point(data=ring_socket,aes(x=X.SIZE,y=MEAN,color="Map by socket")) +
+  geom_line(data=ring_socket,aes(x=X.SIZE,y=MEAN,color="Map by socket",linetype="Real time"))+
+  geom_point(data=ring_model_socket,aes(x=X.SIZE,y=MEAN,color="Map by socket")) +
+  geom_line(data=ring_model_socket,aes(x=X.SIZE,y=MEAN,color="Map by socket",linetype="Theoretical time"))+
+  geom_point(data=ring_model_node,aes(x=X.SIZE,y=MEAN,color="Map by node")) +
+  geom_line(data=ring_model_node,aes(x=X.SIZE,y=MEAN,color="Map by node",linetype="Theoretical time"))+
+  geom_point(data=ring_node,aes(x=X.SIZE,y=MEAN,color="Map by node")) +
+  geom_line(data=ring_node,aes(x=X.SIZE,y=MEAN,color="Map by node",linetype="Real time"))+
+  scale_color_manual(name="Mapping", values = c(10,12,13))+
+  scale_linetype_manual(name="",values=c(1,2))
+sp
+```
+
+
+
+
+```{r, dpi=600, fig.width=10, fig.height=6}
+ring_model_core$MEAN_MESSAGE[ring_model_core$X.SIZE<=12]=core_latency*2
+ring_model_core$MEAN_MESSAGE[ring_model_core$X.SIZE>12]=socket_latency+core_latency
+ring_model_core$MEAN_MESSAGE[ring_model_core$X.SIZE==13]=socket_latency*2
+
+ring_model_socket$MEAN_MESSAGE=socket_latency*2
+
+
+ring_model_node$MEAN_MESSAGE=node_latency
+
+core_latency=0.23
+socket_latency=0.50
+node_latency=1.35
+
+sp = ggplot(ring_core,aes(x=X.SIZE,y=MEAN_MESSAGE,color="Map by core",linetype="Real time"))  +
+  scale_y_continuous(name="Time uSec")+
+  scale_x_continuous(name="Processor number",breaks = ring_core$X.SIZE) +
+  geom_point() + 
+  geom_line()  + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5))+
+  geom_point(data=ring_model_core,aes(x=X.SIZE,y=MEAN_MESSAGE,color="Map by core"))+
+  geom_line(data=ring_model_core,aes(x=X.SIZE,y=MEAN_MESSAGE,color="Map by core",linetype="Theoretical time")) +    
+  geom_point(data=ring_socket,aes(x=X.SIZE,y=MEAN_MESSAGE,color="Map by socket")) +
+  geom_line(data=ring_socket,aes(x=X.SIZE,y=MEAN_MESSAGE,color="Map by socket",linetype="Real time"))+
+  geom_point(data=ring_model_socket,aes(x=X.SIZE,y=MEAN_MESSAGE,color="Map by socket")) +
+  geom_line(data=ring_model_socket,aes(x=X.SIZE,y=MEAN_MESSAGE,color="Map by socket",linetype="Theoretical time"))+
+  geom_point(data=ring_model_node,aes(x=X.SIZE,y=MEAN_MESSAGE,color="Map by node")) +
+  geom_line(data=ring_model_node,aes(x=X.SIZE,y=MEAN_MESSAGE,color="Map by node",linetype="Theoretical time"))+
+  geom_point(data=ring_node,aes(x=X.SIZE,y=MEAN_MESSAGE,color="Map by node")) +
+  geom_line(data=ring_node,aes(x=X.SIZE,y=MEAN_MESSAGE,color="Map by node",linetype="Real time"))+
+  scale_color_manual(name="Mapping", values = c(10,12,13))+
+  scale_linetype_manual(name="",values=c(1,2))
+sp
+```
+
+```{r}
+ob1_core=read.csv("/home/nt/Scrivania/mpi-benchmarks/cache/ob1_core1.csv", header = TRUE)
+ob1_socket=read.csv("/home/nt/Scrivania/mpi-benchmarks/cache/ob1_socket1.csv", header = TRUE)
+ob1_core$L2=ob1_core$L2/ob1_core$L2TOT
+ob1_socket$L2=ob1_socket$L2/ob1_socket$L2TOT
+
+
+ucx_core=read.csv("/home/nt/Scrivania/mpi-benchmarks/cache/ucx_core1.csv", header = TRUE)
+ucx_socket=read.csv("/home/nt/Scrivania/mpi-benchmarks/cache/ucx_socket1.csv", header = TRUE)
+ucx_core$L2=ucx_core$L2/ucx_core$L2TOT
+ucx_socket$L2=ucx_socket$L2/ucx_socket$L2TOT
+
+sp = ggplot(ob1_core,aes(x=X.SIZE,y=L2,color="L2 miss OB1 across core")) + scale_x_continuous(trans='log2',name="Message Size Bytes",breaks=ob1_core$X.SIZE) + geom_point() + geom_line()  + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + scale_y_continuous(name="Log(Cache miss)") +
+geom_point(data=ob1_socket,aes(x=X.SIZE,y=L2,color="L2 miss OB1 across socket")) + geom_line(data=ob1_core_send,aes(x=X.SIZE,y=L2,color="L2 miss OB1 across socket"))  +  geom_point(data=ucx_socket,aes(x=X.SIZE,y=L2,color="L2 miss UCX across socket")) + geom_line(data=ucx_socket_send,aes(x=X.SIZE,y=L2,color="L2 miss UCX across socket")) + geom_point(data=ucx_core,aes(x=X.SIZE,y=L2,color="L2 miss UCX across core")) + geom_line(data=ucx_core,aes(x=X.SIZE,y=L2,color="L2 miss UCX across core"))  
+
+sp
+
+```
+
