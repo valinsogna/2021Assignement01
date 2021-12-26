@@ -178,7 +178,16 @@ sp = ggplot(t_by_core,aes(x=Np,y=mean,color="by core",linetype="Exp data"))  +
   geom_text(x = 16, y = 18, label = lab_socket, color = col_by_socket, size=2, parse = T) +
   geom_text(x = 15, y = 27, label = lab_node, color = "#ffbf00", size=2, parse = T) +
   geom_text(x = 21, y = 25, label = lab_node2, color = "#104ec9", size=2, parse = T) +
-  theme(plot.title = element_text(size = 12, face = "bold",hjust = 0.5,margin = margin(t = 6)), plot.subtitle = element_text(size = 10, hjust = 0.5, margin = margin(t = 4, b = 7), face = "italic"), axis.title = element_text(face = "bold"), legend.text = element_text(margin = margin(t = 4, b = 4, r=4), size=8), legend.title = element_text(size = 9), axis.title.x = element_text(margin = margin(t = 8, b=6)), axis.title.y = element_text(margin = margin(r = 10,l=8)), axis.text = element_text(color= "#2f3030", face="bold"), plot.caption = element_text(color = "darkblue", face = "italic", size = 10, margin = margin(b =6))) +
+  theme(plot.title = element_text(size = 12, face = "bold",hjust = 0.5,margin = margin(t = 6)), 
+        plot.subtitle = element_text(size = 10, hjust = 0.5, margin = margin(t = 4, b = 7), face = "italic"), 
+        axis.title = element_text(face = "bold"), 
+        legend.text = element_text(margin = margin(t = 4, b = 4, r=4), size=8), 
+        legend.title = element_text(size = 9),
+        axis.title.x = element_text(margin = margin(t = 8, b=6)), 
+        axis.title.y = element_text(margin = margin(r = 10,l=8)), 
+        axis.text = element_text(color= "#2f3030", face="bold"), 
+        plot.caption = element_text(color = "darkblue", face = "italic", size = 10, margin = margin(b =6))
+        ) +
  labs(title="Ring comparison with PingPing model of 4B message", subtitle="Execution time vs number of processes", caption = bquote(paste(lambda[cor], "= ", .(core_latency), ",  ", lambda[soc], "= ", .(socket_latency), ", ",  lambda[nod], "= ", .(node_latency)))) +
  theme(
 #  panel.background = element_rect(fill = "#ebeef0", colour = "#d5dce0",
@@ -320,8 +329,8 @@ NUMA node1 CPU(s):     1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41
 
 
 ### Networks and protocols used
-- High Speed Network **100 Gbit InfiniBand**: with $pick$ $perf_{theo}$ of 100 Gbit/s = 12.5 GB/s = 12500 MB/s;  $(1)$
-- In band management network **25 Gbit Ethernet**: with $pick$ $perf_{theo}$ of 25 Gbit/s = 3.125 GB/s = 3125 MB/s;   $(2)$
+- High Speed Network **100 Gbit InfiniBand**: with $peak$ $perf_{theo}$ of 100 Gbit/s = 12.5 GB/s = **12500 MB/s**;  $(1)$
+- In band management network **25 Gbit Ethernet**: with $peak$ $perf_{theo}$ of 25 Gbit/s = 3.125 GB/s = **3125 MB/s**;   $(2)$
 
 The main differences among these two are the usage of Sockets Interface and TCP/IP protocol for the Ethernet network, and the usage of much more rapid OpenFabrics Verbs (no Kernel stack) with the native IB protocol for InfiniBand network.
 Moreover, IB protocol has RDMA (Remote Direct Memory Access) that makes InfiniBand faster: it is an operation which access the memory directly  without involving the CPU.
@@ -428,7 +437,7 @@ It reports the time $\Delta t$ (in $\mu s$), throughput $\frac{X}{\Delta t}$ (in
 ```
 
 
-### Measurments
+### Measurements
 **The bandwidth and the latency estimation for gpu and thin nodes is done across cores, sockets and nodes**, with different protocols, PCI devices and libraries. 
 
 The nodes involved are:
@@ -438,20 +447,268 @@ The nodes involved are:
 * ct1pg-gnode001, gpu node for results across cores, sockets and nodes.
 * ct1pg-gnode003, gpu node for results across nodes.
 
-**Each specific run is repeated 10 times** with `-msglog 28` and each time the entire node was reserved in order to reduce noise in measurements. Thus, from the measurements, it was taken the mean time $\Delta t$ between the 10 results for each message size $X$, along with some statistics (ex. maximum error on time $e_t = \frac{\Delta t_{max} - \Delta t_{min}}{2}$).
+**Each specific run is repeated 10 times** with `-msglog 28` and each time the entire node was reserved in order to reduce noise in measurements. Thus, from the measurements, it was taken the mean time $\Delta t$ and the mean throughput $X/\Delta t$ between the 10 results for each message size $X$, along with some statistics (ex. maximum error on time and on throughput $e_t = \frac{\Delta t_{max} - \Delta t_{min}}{2}$).
 
 The PingPong benchmark is compiled on either the thin or gpu node using two different libraries:
 
 * **OpenMPI**: version **openmpi-4.0.3** for the running across nodes with `UCX_NET_DEVICES` specification and latest **openmpi-4.1.1** for the others.
-* **Intel**: version intel.
+* **Intel**: version `intel` available on ORFEO.
 
 With **OpenMPI** implementation it is possible to specify the MPI frameworks and plugins (like pml and btl) that can be used while running. 
 Across nodes, cores and sockets the following as been tested:
 
-* *pml*: **ob1** and **ucx**. 
-* *btl*: **tcp**, **self** and **vader**. 
+* *PML* : **ob1** and **ucx**. 
+* *BTL* : **tcp**, **self** and **vader**. 
 
 The following graphs show the behaviour inside the same node, i.e mapping the processes across two sockets or in the same socket. Mapping the processes in the same socket show of course often a better performance. The behaviour before the asymptotic plateau is strange and show very different performance among different implementation, the main cause is the cache. 
+
+
+```{r, include=FALSE}
+node_ib=read.csv("section2/mydata/openmpi_lib/thin/out/node_ib.out.csv", header = TRUE)
+node_ob1_tcp=read.csv("section2/mydata/openmpi_lib/thin/out/node_ob1_selftcp.out.csv", header = TRUE)
+node_ucx_br0=read.csv("section2/mydata/openmpi_lib/thin/out/node_ucx_br0.out.csv", header = TRUE)
+node_ucx_ib0=read.csv("section2/mydata/openmpi_lib/thin/out/node_ucx_ib0.out.csv", header = TRUE)
+node_ucx_mlx5=read.csv("section2/mydata/openmpi_lib/thin/out/node_ucx_mlx5.out.csv", header = TRUE)
+
+socket_ib=read.csv("section2/mydata/openmpi_lib/thin/out/socket_ib.out.csv", header = TRUE)
+socket_ob1_tcp=read.csv("section2/mydata/openmpi_lib/thin/out/socket_ob1_selftcp.out.csv", header = TRUE)
+socket_ob1_vader=read.csv("section2/mydata/openmpi_lib/thin/out/socket_ob1_selfvader.out.csv", header = TRUE)
+
+core_ib=read.csv("section2/mydata/openmpi_lib/thin/out/core_ib.out.csv", header = TRUE)
+core_ob1_tcp=read.csv("section2/mydata/openmpi_lib/thin/out/core_ob1_selftcp.out.csv", header = TRUE)
+core_ob1_vader=read.csv("section2/mydata/openmpi_lib/thin/out/core_ob1_selfvader.out.csv", header = TRUE)
+
+```
+
+```{r, include=FALSE}
+socket_ib_gpu=read.csv("section2/mydata/openmpi_lib/gpu/out/socket_ib.out.csv", header = TRUE)
+socket_ob1_tcp_gpu=read.csv("section2/mydata/openmpi_lib/gpu/out/socket_ob1_selftcp.out.csv", header = TRUE)
+socket_ob1_vader_gpu=read.csv("section2/mydata/openmpi_lib/gpu/out/socket_ob1_selfvader.out.csv", header = TRUE)
+
+core_ib_gpu=read.csv("section2/mydata/openmpi_lib/gpu/out/core_ib.out.csv", header = TRUE)
+core_ob1_tcp_gpu=read.csv("section2/mydata/openmpi_lib/gpu/out/core_ob1_selftcp.out.csv", header = TRUE)
+core_ob1_vader_gpu=read.csv("section2/mydata/openmpi_lib/gpu/out/core_ob1_selfvader.out.csv", header = TRUE)
+
+node_ib_gpu=read.csv("section2/mydata/openmpi_lib/gpu/out/node_ib.out.csv", header = TRUE)
+node_ob1_tcp_gpu=read.csv("section2/mydata/openmpi_lib/gpu/out/node_ob1_selftcp.out.csv", header = TRUE)
+node_ucx_br0_gpu=read.csv("section2/mydata/openmpi_lib/gpu/out/node_ucx_br0.out.csv", header = TRUE)
+node_ucx_ib0_gpu=read.csv("section2/mydata/openmpi_lib/gpu/out/node_ucx_ib0.out.csv", header = TRUE)
+node_ucx_mlx5_gpu=read.csv("section2/mydata/openmpi_lib/gpu/out/node_ucx_mlx5.out.csv", header = TRUE)
+```
+
+```{r, include=FALSE}
+node_ib_intel=read.csv("section2/mydata/intel_lib/thin/out/node.out.csv", header = TRUE)
+socket_ib_intel=read.csv("section2/mydata/intel_lib/thin/out/socket.out.csv", header = TRUE)
+core_ib_intel=read.csv("section2/mydata/intel_lib/thin/out/core.out.csv", header = TRUE)
+def_intel=read.csv("section2/mydata/intel_lib/thin/out/def.out.csv", header = TRUE)
+```
+
+
+```{r, include=FALSE}
+socket_ib_intel_gpu=read.csv("section2/mydata/intel_lib/gpu/out/socket.out.csv", header = TRUE)
+core_ib_intel_gpu=read.csv("section2/mydata/intel_lib/gpu/out/core.out.csv", header = TRUE)
+node_ib_intel_gpu=read.csv("section2/mydata/intel_lib/gpu/out/node.out.csv", header = TRUE)
+def_intel_gpu=read.csv("section2/mydata/intel_lib/gpu/out/def.out.csv", header = TRUE)
+```
+
+
+```{r, include=FALSE}
+col_ib="#1B9E77" #verde freddo
+col_ib_intel="#E6AB02" #giallo
+col_ob1_tcp="#7570B3" #viola
+col_ob1_vader="#E7298A" #fucsia
+col_ucx_br0="#D95F02" #verde caldo
+col_ucx_ib0="#A6761D" #ocra
+col_ucx_mlx5="#66A61E" #grigio
+```
+
+```{r, echo=FALSE, warning=FALSE, message = FALSE, fig.align='center'}
+#plotting BY NODE openmpi e intel - THIN bandwith
+library(ggplot2)
+sp = ggplot(node_ib,aes(x=X.bytes,y=mbs,color="UCX IB")) + 
+  scale_x_continuous(trans='log',name="Size message (Bytes)",breaks=node_ib$X.bytes)+scale_y_continuous(breaks = seq(0,13000,1000),name = expression(bold("Throughput (MB/s)")))  +
+  geom_point(size = 3,shape=20) + geom_line(aes(color="UCX IB", linetype="by node"))  + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  geom_point(data=node_ob1_tcp,aes(x=X.bytes,y=mbs,color="OB1 tcp"),size = 3,shape=20) + 
+  geom_line(data=node_ob1_tcp,aes(x=X.bytes,y=mbs,color="OB1 tcp", linetype="by node")) +   
+  geom_point(data=node_ucx_br0,aes(x=X.bytes,y=mbs,color="UCX br0"),size = 3,shape=20) +   
+  geom_line(data=node_ucx_br0,aes(x=X.bytes,y=mbs,color="UCX br0", linetype="by node")) +   
+  geom_point(data=node_ucx_ib0,aes(x=X.bytes,y=mbs,color="UCX ib0"),size = 3,shape=20) +   
+  geom_line(data=node_ucx_ib0,aes(x=X.bytes,y=mbs,color="UCX ib0", linetype="by node")) +  
+  geom_point(data=node_ib_intel,aes(x=X.bytes,y=mbs,color="Intel IB"),size = 3,shape=20) + 
+  geom_line(data=node_ib_intel,aes(x=X.bytes,y=mbs,color="Intel IB", linetype="by node")) +
+  geom_point(data=node_ucx_mlx5,aes(x=X.bytes,y=mbs,color="UCX mlx5"),size = 3,shape=20) +   
+  geom_line(data=node_ucx_mlx5,aes(x=X.bytes,y=mbs,color="UCX mlx5", linetype="by node")) + 
+  scale_color_manual(name="Network", values = c(col_ib_intel, col_ob1_tcp, col_ucx_br0, col_ucx_mlx5, col_ucx_ib0, col_ucx_mlx5)) +
+  scale_linetype_manual(name="Run",values=c(1)) + 
+  labs(title="PingPong on THIN node - by node", subtitle="Execution throughput vs size of message") +
+  theme(plot.title = element_text(size = 12, face = "bold",hjust = 0.5,margin = margin(t = 6)), 
+        plot.subtitle = element_text(size = 10, hjust = 0.5, margin = margin(t = 4, b = 7), face = "italic"), 
+        axis.title = element_text(face = "bold"), 
+        legend.text = element_text(margin = margin(t = 4, b = 4, r=4), size=8), 
+        axis.title.x = element_text(margin = margin(t = 8, b=6)), 
+        axis.title.y = element_text(margin = margin(r = 10,l=8)), 
+        axis.text = element_text(color= "#2f3030", face="bold"),
+        ) +
+  theme(
+#  panel.background = element_rect(fill = "#ebeef0", colour = "#d5dce0", size = 2, linetype = "solid"),
+  panel.grid.major = element_line(size = 0.3, linetype = 'solid', colour = "white"), 
+  panel.grid.minor = element_line(size = 0.17, linetype = 'solid', colour = "white")
+  ) + 
+  geom_hline(yintercept=3125, 
+              color = "blue",linetype="dotted", size=0.4) +
+  geom_hline(yintercept=12500, 
+              color = "blue",linetype="dotted", size=0.4) +
+  annotate("text", x=8, y=2260, label= "25 Gbit peak",color="blue") +
+  annotate("text", x=8, y=11800, label= "100 Gbit peak",color="blue")
+
+sp 
+
+```
+
+```{r, echo=FALSE, warning=FALSE, message = FALSE, fig.align='center'}
+#plotting BY CORE/SOCKET openmpi e intel - THIN bandwith
+library(ggplot2)
+sp = ggplot(core_ib,aes(x=X.bytes,y=mbs,color="UCX IB",linetype="by core")) + #4 colore
+  scale_x_continuous(trans='log',name="Size message (Bytes)",breaks=core_ib$X.bytes)  +
+  geom_point(size = 3,shape=20) + geom_line() + 
+  scale_y_continuous(breaks = seq(0,25000,1500), name = expression(bold("Throughput (MB/s)"))) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  geom_point(data=core_ob1_tcp,aes(x=X.bytes,y=mbs,color="OB1 tcp"),size = 3,shape=20) + #2 colore
+  geom_line(data=core_ob1_tcp,aes(x=X.bytes,y=mbs,color="OB1 tcp",linetype="by core")) +
+  geom_point(data=core_ob1_vader,aes(x=X.bytes,y=mbs,color="OB1 vader"),size = 3,shape=20) + #3 colore
+  geom_line(data=core_ob1_vader,aes(x=X.bytes,y=mbs,color="OB1 vader",linetype="by core")) +
+  geom_point(data=socket_ib,aes(x=X.bytes,y=mbs,color="UCX IB"),size = 3,shape=20) +
+  geom_line(data=socket_ib,aes(x=X.bytes,y=mbs,color="UCX IB",linetype="by socket")) + #4 colore
+  geom_point(data=socket_ob1_tcp,aes(x=X.bytes,y=mbs,color="OB1 tcp"),size = 3,shape=20) + #2 colore
+  geom_line(data=socket_ob1_tcp,aes(x=X.bytes,y=mbs,color="OB1 tcp",linetype="by socket")) +
+  geom_point(data=socket_ob1_vader,aes(x=X.bytes,y=mbs,color="OB1 vader"),size = 3,shape=20) + #3 colore
+  geom_line(data=socket_ob1_vader,aes(x=X.bytes,y=mbs,color="OB1 vader",linetype="by socket")) +
+  geom_point(data=socket_ib_intel,aes(x=X.bytes,y=mbs,color="Intel IB"),size = 3,shape=20) + #1 colore
+  geom_line(data=socket_ib_intel,aes(x=X.bytes,y=mbs,color="Intel IB",linetype="by socket")) +
+  geom_point(data=core_ib_intel,aes(x=X.bytes,y=mbs,color="Intel IB"),size = 3,shape=20) + #1 colore
+  geom_line(data=core_ib_intel,aes(x=X.bytes,y=mbs,color="Intel IB",linetype="by core")) +
+  scale_color_manual(name="Network", values = c(col_ib_intel, col_ob1_tcp, col_ob1_vader, col_ib)) +
+  scale_linetype_manual(name="Run",values=c(1,2)) + 
+  labs(title="PingPong on THIN node - by core/socket", subtitle="Execution throughput vs size of message") +
+  theme(plot.title = element_text(size = 12, face = "bold",hjust = 0.5,margin = margin(t = 6)), 
+        plot.subtitle = element_text(size = 10, hjust = 0.5, margin = margin(t = 4, b = 7), face = "italic"), 
+        axis.title = element_text(face = "bold"), 
+        legend.text = element_text(margin = margin(t = 4, b = 4, r=4), size=8), 
+        axis.title.x = element_text(margin = margin(t = 8, b=6)), 
+        axis.title.y = element_text(margin = margin(r = 10,l=8)), 
+        axis.text = element_text(color= "#2f3030", face="bold"),
+        ) +
+  theme(# panel.background = element_rect(fill = "#ebeef0", colour = "#d5dce0", size = 2, linetype = "solid"),
+    panel.grid.major = element_line(size = 0.3, linetype = 'solid', colour = "white"), 
+    panel.grid.minor = element_line(size = 0.17, linetype = 'solid', colour = "white")
+  ) +
+  geom_vline(xintercept=32768, 
+              color = "red",linetype="dotted", size=0.4) +
+  geom_vline(xintercept=1048576, 
+              color = "red",linetype="dotted", size=0.4) +
+  geom_vline(xintercept=19922944, 
+              color = "red",linetype="dotted", size=0.4) +
+  annotate("text", x=58000, y=20000, label= "L1",color="red") +
+  annotate("text", x=1800000, y=20000, label= "L2",color="red") +
+  annotate("text", x=29900000, y=20000, label= "L3",color="red")
+
+  
+sp
+
+```
+
+```{r, echo=FALSE, warning=FALSE, message = FALSE, fig.align='center'}
+#plotting BY NODE openmpi e intel - GPU bandwith
+library(ggplot2)
+sp = ggplot(node_ib_gpu,aes(x=X.bytes,y=mbs,color="UCX IB")) + 
+  scale_x_continuous(trans='log2',name="Size message (Bytes)",breaks=node_ib_gpu$X.bytes)+scale_y_continuous(breaks = seq(0,13000,1000),name = expression(bold("Throughput (MB/s)")))  +
+  geom_point(size = 3,shape=20) + geom_line()  + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  geom_point(data=node_ob1_tcp_gpu,aes(x=X.bytes,y=mbs,color="OB1 tcp"),size = 3,shape=20) + 
+  geom_line(data=node_ob1_tcp_gpu,aes(x=X.bytes,y=mbs,color="OB1 tcp", linetype="by node")) +   
+  geom_point(data=node_ucx_br0_gpu,aes(x=X.bytes,y=mbs,color="UCX br0"),size = 3,shape=20) +   
+  geom_line(data=node_ucx_br0_gpu,aes(x=X.bytes,y=mbs,color="UCX br0", linetype="by node")) +   
+  geom_point(data=node_ucx_ib0_gpu,aes(x=X.bytes,y=mbs,color="UCX ib0"),size = 3,shape=20) +   
+  geom_line(data=node_ucx_ib0_gpu,aes(x=X.bytes,y=mbs,color="UCX ib0", linetype="by node")) +  
+  geom_point(data=node_ib_intel_gpu,aes(x=X.bytes,y=mbs,color="Intel IB"),size = 3,shape=20) + 
+  geom_line(data=node_ib_intel_gpu,aes(x=X.bytes,y=mbs,color="Intel IB", linetype="by node")) +
+  geom_point(data=node_ucx_mlx5_gpu,aes(x=X.bytes,y=mbs,color="UCX mlx5"),size = 3,shape=20) +   
+  geom_line(data=node_ucx_mlx5_gpu,aes(x=X.bytes,y=mbs,color="UCX mlx5", linetype="by node")) + 
+  scale_color_manual(name="Network", values = c(col_ib_intel, col_ob1_tcp, col_ucx_br0, col_ucx_mlx5, col_ucx_ib0, col_ucx_mlx5)) +
+  scale_linetype_manual(name="Run",values=c(1)) + 
+  labs(title="PingPong on GPU node - by node", subtitle="Execution throughput vs size of message") +
+  theme(plot.title = element_text(size = 12, face = "bold",hjust = 0.5,margin = margin(t = 6)), 
+        plot.subtitle = element_text(size = 10, hjust = 0.5, margin = margin(t = 4, b = 7), face = "italic"), 
+        axis.title = element_text(face = "bold"), 
+        legend.text = element_text(margin = margin(t = 4, b = 4, r=4), size=8), 
+        axis.title.x = element_text(margin = margin(t = 8, b=6)), 
+        axis.title.y = element_text(margin = margin(r = 10,l=8)), 
+        axis.text = element_text(color= "#2f3030", face="bold"),
+        ) +
+  theme(
+#  panel.background = element_rect(fill = "#ebeef0", colour = "#d5dce0", size = 2, linetype = "solid"),
+  panel.grid.major = element_line(size = 0.3, linetype = 'solid', colour = "white"), 
+  panel.grid.minor = element_line(size = 0.17, linetype = 'solid', colour = "white")
+  ) + 
+  geom_hline(yintercept=3125, 
+              color = "blue",linetype="dotted", size=0.4) +
+  geom_hline(yintercept=12500, 
+              color = "blue",linetype="dotted", size=0.4) +
+  annotate("text", x=8, y=2260, label= "25 Gbit peak",color="blue") +
+  annotate("text", x=8, y=11800, label= "100 Gbit peak",color="blue")
+sp 
+
+```
+
+```{r, echo=FALSE, warning=FALSE, message = FALSE, fig.align='center'}
+#plotting BY CORE/SOCKET openmpi e intel - GPU bandwith
+library(ggplot2)
+sp = ggplot(core_ib_gpu,aes(x=X.bytes,y=mbs,color="UCX IB",linetype="by core")) + #4 colore
+  scale_x_continuous(trans='log',name="Size message (Bytes)",breaks=core_ib_gpu$X.bytes)  +
+  geom_point(size = 3,shape=20) + geom_line() + 
+  scale_y_continuous(breaks = seq(0,25000,1500), name = expression(bold("Throughput (MB/s)"))) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  geom_point(data=core_ob1_tcp_gpu,aes(x=X.bytes,y=mbs,color="OB1 tcp"),size = 3,shape=20) + #2 colore
+  geom_line(data=core_ob1_tcp_gpu,aes(x=X.bytes,y=mbs,color="OB1 tcp",linetype="by core")) +
+  geom_point(data=core_ob1_vader_gpu,aes(x=X.bytes,y=mbs,color="OB1 vader"),size = 3,shape=20) + #3 colore
+  geom_line(data=core_ob1_vader_gpu,aes(x=X.bytes,y=mbs,color="OB1 vader",linetype="by core")) +
+  geom_point(data=socket_ib_gpu,aes(x=X.bytes,y=mbs,color="UCX IB"),size = 3,shape=20) +
+  geom_line(data=socket_ib_gpu,aes(x=X.bytes,y=mbs,color="UCX IB",linetype="by socket")) + #4 colore
+  geom_point(data=socket_ob1_tcp_gpu,aes(x=X.bytes,y=mbs,color="OB1 tcp"),size = 3,shape=20) + #2 colore
+  geom_line(data=socket_ob1_tcp_gpu,aes(x=X.bytes,y=mbs,color="OB1 tcp",linetype="by socket")) +
+  geom_point(data=socket_ob1_vader_gpu,aes(x=X.bytes,y=mbs,color="OB1 vader"),size = 3,shape=20) + #3 colore
+  geom_line(data=socket_ob1_vader_gpu,aes(x=X.bytes,y=mbs,color="OB1 vader",linetype="by socket")) +
+  geom_point(data=socket_ib_intel_gpu,aes(x=X.bytes,y=mbs,color="Intel IB"),size = 3,shape=20) + #1 colore
+  geom_line(data=socket_ib_intel_gpu,aes(x=X.bytes,y=mbs,color="Intel IB",linetype="by socket")) +
+  geom_point(data=core_ib_intel_gpu,aes(x=X.bytes,y=mbs,color="Intel IB"),size = 3,shape=20) + #1 colore
+  geom_line(data=core_ib_intel_gpu,aes(x=X.bytes,y=mbs,color="Intel IB",linetype="by core")) +
+  scale_color_manual(name="Network", values = c(col_ib_intel, col_ob1_tcp, col_ob1_vader, col_ib)) +
+  scale_linetype_manual(name="Run",values=c(1,2)) + 
+  labs(title="PingPong on GPU node - by core/socket", subtitle="Execution throughput vs size of message") +
+  theme(plot.title = element_text(size = 12, face = "bold",hjust = 0.5,margin = margin(t = 6)), 
+        plot.subtitle = element_text(size = 10, hjust = 0.5, margin = margin(t = 4, b = 7), face = "italic"), 
+        axis.title = element_text(face = "bold"), 
+        legend.text = element_text(margin = margin(t = 4, b = 4, r=4), size=8), 
+        axis.title.x = element_text(margin = margin(t = 8, b=6)), 
+        axis.title.y = element_text(margin = margin(r = 10,l=8)), 
+        axis.text = element_text(color= "#2f3030", face="bold"),
+        ) +
+  theme(#panel.background = element_rect(fill = "#ebeef0", colour = "#d5dce0", size = 2, linetype = "solid"),
+    panel.grid.major = element_line(size = 0.3, linetype = 'solid', colour = "white"), 
+    panel.grid.minor = element_line(size = 0.17, linetype = 'solid', colour = "white")
+  ) +
+  geom_vline(xintercept=32768, 
+              color = "red",linetype="dotted", size=0.4) +
+  geom_vline(xintercept=1048576, 
+              color = "red",linetype="dotted", size=0.4) +
+  geom_vline(xintercept=19922944, 
+              color = "red",linetype="dotted", size=0.4) +
+  annotate("text", x=58000, y=20000, label= "L1",color="red") +
+  annotate("text", x=1800000, y=20000, label= "L2",color="red") +
+  annotate("text", x=29900000, y=20000, label= "L3",color="red")
+  
+sp
+
+```
 
 Cache sizes are reported on graph with vertical black dashed line. 
 The behaviour appear strange before $16$ MB included, after that size, it is stable beacause the message size is larger than all caches. The larger cache is **L3** with $19$ MB.
