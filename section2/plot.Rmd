@@ -272,6 +272,7 @@ sp = ggplot(node_ib_gpu,aes(x=X.bytes,y=mbs,color="UCX IB")) +
 sp 
 
 ```
+
 ```{r, dpi=600, fig.width=10, fig.height=6}
 #plotting BY CORE/SOCKET openmpi e intel - THIN latency
 library(ggplot2)
@@ -317,6 +318,41 @@ sp
 ```
 
 ```{r}
+produce_png=function(d, l, b, name){
+  
+  png(name, width=800, height=700)
+  library(ggplot2)
+  ggplot(d,aes(x=X.bytes,y=mbs,color="Exp data")) +
+    scale_x_continuous(trans='log',name="Size message (Bytes)",breaks=d$X.bytes)  +
+    geom_point(size = 8,shape=20) + geom_line(linetype="solid") + 
+    scale_y_continuous(name = expression(bold("Throughput (MB/s)"))) +
+    geom_line(data=d,aes(x=X.bytes,y=b_est,color="Fit"),linetype="twodash") +
+    scale_color_manual(name="Data", values =c("#0060FF", "#d12e62")) +
+    labs(title=paste(name, "data vs fitted model", collapse =' - '),
+         subtitle="Execution throughput vs size of message",
+         caption = bquote(paste(lambda[net], "= ", .(l), ",  ", b[net], "= ", .(b)))
+         ) +
+    theme(plot.title = element_text(size = 26, face = "bold",hjust = 0.5,margin = margin(t = 12)),
+          plot.subtitle = element_text(size = 20, hjust = 0.5, margin = margin(t = 7, b = 15), face = "italic"),
+          axis.title = element_text(face = "bold"), 
+          legend.text = element_text(margin = margin(t = 7, b = 7, r=12)),
+          axis.title.x = element_text(margin = margin(t = 15, b=12)),
+          axis.title.y = element_text(margin = margin(r = 15,l=12)),
+          axis.text = element_text(color= "#2f3030", face="bold"),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          text = element_text(size=20),
+          plot.caption = element_text(color = "darkblue", face = "italic", size = 20, margin = margin(b =6, t= 10))) +
+    theme(
+    panel.grid.major = element_line(size = 0.6, linetype = 'solid', colour = "white"), 
+    panel.grid.minor = element_line(size = 0.35, linetype = 'solid', colour = "white")
+    )
+  # 3. Close the file
+  dev.off()
+}
+
+```
+
+```{r}
 calculate_fit=function(d){
   #Fit the linear model 1: time = beta_0+beta_1*X + e
   fit=lm(data=d[1:10,], formula = t~X.bytes)
@@ -336,6 +372,10 @@ calculate_fit=function(d){
   d$l_std=out$coefficients[1,2]
   d$b_fit=b
   d$b_std=out2$coefficients[2,2]
+  cols_add <- c("X.bytes","t","mbs","t_est","b_est")
+  new_d <- d[, (colnames(d) %in% cols_add)]
+  name <- paste(deparse(substitute(d)), ".png", collapse ='')
+  produce_png(new_d, l, b, name)
   return(d)
 }
 
@@ -386,6 +426,80 @@ produce_csv(core_ib_intel_gpu)
 produce_csv(node_ib_intel_gpu)
 produce_csv(def_intel_gpu)
 ```
+
+```{r}
+p_node_ib=read.csv("csv-files/node_ib.csv", header = TRUE)
+p_node_ob1_tcp=read.csv("csv-files/node_ob1_tcp.csv", header = TRUE)
+p_node_ucx_br0=read.csv("csv-files/node_ucx_br0.csv", header = TRUE)
+p_node_ucx_ib0=read.csv("csv-files/node_ucx_ib0.csv", header = TRUE)
+p_node_ucx_mlx5=read.csv("csv-files/node_ucx_mlx5.csv", header = TRUE)
+
+p_socket_ib=read.csv("csv-files/socket_ib.csv", header = TRUE)
+p_socket_ob1_tcp=read.csv("csv-files/socket_ob1_tcp.csv", header = TRUE)
+p_socket_ob1_vader=read.csv("csv-files/socket_ob1_vader.csv", header = TRUE)
+p_core_ib=read.csv("csv-files/core_ib.csv", header = TRUE)
+p_core_ob1_tcp=read.csv("csv-files/core_ob1_tcp.csv", header = TRUE)
+p_core_ob1_vader=read.csv("csv-files/core_ob1_vader.csv", header = TRUE)
+
+p_socket_ib_gpu=read.csv("csv-files/socket_ib_gpu.csv", header = TRUE)
+p_socket_ob1_tcp_gpu=read.csv("csv-files/socket_ob1_tcp_gpu.csv", header = TRUE)
+p_socket_ob1_vader_gpu=read.csv("csv-files/socket_ob1_vader_gpu.csv", header = TRUE)
+p_core_ib_gpu=read.csv("csv-files/core_ib_gpu.csv", header = TRUE)
+p_core_ob1_tcp_gpu=read.csv("csv-files/core_ob1_tcp_gpu.csv", header = TRUE)
+p_core_ob1_vader_gpu=read.csv("csv-files/core_ob1_vader_gpu.csv", header = TRUE)
+
+p_node_ib_gpu=read.csv("csv-files/node_ib_gpu.csv", header = TRUE)
+p_node_ob1_tcp_gpu=read.csv("csv-files/node_ob1_tcp_gpu.csv", header = TRUE)
+p_node_ucx_br0_gpu=read.csv("csv-files/node_ucx_br0_gpu.csv", header = TRUE)
+p_node_ucx_ib0_gpu=read.csv("csv-files/node_ucx_ib0_gpu.csv", header = TRUE)
+p_node_ucx_mlx5_gpu=read.csv("csv-files/node_ucx_mlx5_gpu.csv", header = TRUE)
+
+p_socket_ib_intel_gpu=read.csv("csv-files/socket_ib_intel_gpu.csv", header = TRUE)
+p_core_ib_intel_gpu=read.csv("csv-files/core_ib_intel_gpu.csv", header = TRUE)
+p_node_ib_intel_gpu=read.csv("csv-files/node_ib_intel_gpu.csv", header = TRUE)
+p_def_intel_gpu=read.csv("csv-files/def_intel_gpu.csv", header = TRUE)
+
+p_node_ib_intel=read.csv("csv-files/node_ib_intel.csv", header = TRUE)
+p_socket_ib_intel=read.csv("csv-files/socket_ib_intel.csv", header = TRUE)
+p_core_ib_intel=read.csv("csv-files/core_ib_intel.csv", header = TRUE)
+p_def_intel=read.csv("csv-files/def_intel.csv", header = TRUE)
+```
+
+```{r}
+  png("def_intel.png", width=800, height=700)
+  library(ggplot2)
+  ggplot(p_def_intel,aes(x=X.bytes,y=mbs,color="Exp data")) +
+    scale_x_continuous(trans='log',name="Size message (Bytes)",breaks=p_def_intel$X.bytes)  +
+    geom_point(size = 8,shape=20) + geom_line(linetype="solid") + 
+    scale_y_continuous(name = expression(bold("Throughput (MB/s)"))) +
+    geom_line(data=p_def_intel,aes(x=X.bytes,y=b_est,color="Fit"),linetype="twodash") +
+    scale_color_manual(name="Data", values =c("#0060FF", "#d12e62")) +
+    labs(title="def_intel - data vs fitted model",
+         subtitle="Execution throughput vs size of message",
+         caption = bquote(paste(lambda[net], "= ", .(p_def_intel$l_fit[2]), ",  ", b[net], "= ", .(p_def_intel$b_fit[2])))
+         ) +
+    theme(plot.title = element_text(size = 26, face = "bold",hjust = 0.5,margin = margin(t = 12)),
+          plot.subtitle = element_text(size = 20, hjust = 0.5, margin = margin(t = 7, b = 15), face = "italic"),
+          axis.title = element_text(face = "bold"), 
+          legend.text = element_text(margin = margin(t = 7, b = 7, r=12)),
+          axis.title.x = element_text(margin = margin(t = 15, b=12)),
+          axis.title.y = element_text(margin = margin(r = 15,l=12)),
+          axis.text = element_text(color= "#2f3030", face="bold"),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          text = element_text(size=20),
+          plot.caption = element_text(color = "darkblue", face = "italic", size = 20, margin = margin(b =6, t= 10))) +
+    theme(
+    panel.grid.major = element_line(size = 0.6, linetype = 'solid', colour = "white"), 
+    panel.grid.minor = element_line(size = 0.35, linetype = 'solid', colour = "white")
+    )
+  # 3. Close the file
+  dev.off()
+
+
+```
+
+
+
 
 ```
 

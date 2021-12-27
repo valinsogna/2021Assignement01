@@ -748,7 +748,11 @@ sp
 
 ### Results
 
-Here are shown the estimation via least square methods of the latency $\lambda_{net}$ and bandwidth $b_{net}$ of the networks used.
+Here are shown the estimation via least square methods of the latency $\lambda_{net}$ and bandwidth $b_{net}$ of the networks used. To see the fit model estimation look in the folder *section2/mydata/csv-files/*.
+
+
+
+
 
 # Exercise 3
 ## Jacobi solver - Performance model
