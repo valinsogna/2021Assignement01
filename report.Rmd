@@ -932,12 +932,41 @@ The following is an example of running with $L=700$ and $N=(4,1,1)$:
 ```
 \normalsize
 
+The following tables show the results of performance from relations $(*)$, $(**)$ and $(***)$ for both thin and gpu node with different mapping of the processes. 
 
-Even if this model seems accurate, some comments are required:
-mapping by socket lead a sightly better performance respect core mapping and this is not what expected by theoretical model.
-If socket map on one hand lead to poor communication performance on other hand exploit better the memory allocation. When one socket is filled with 12 processes the entire grid is stored on socket competence LRDIMM, but spreading processes across 2 socket lead to better exploit of bandwidth using different memory controller and then all memory channel available. This solver at each iteration elaborates an huge amount of memory, given $L=1200$ and $12$ worker at least 300 GB of ram are elaborated (half memory LRDIMM are saturated,then all single socket channel are used).
+For evaluating $T_c$, the bidirectional bandwith $b$ and latency $\lambda$ considered are taken by Intel® IMB-MPI1 PingPing Benchmark.
+
+```{r, echo=FALSE, out.width="75%", fig.align='center'}
+knitr::include_graphics("./img/jacobi_thin_core.png")
+```
+
+```{r, echo=FALSE, out.width="75%", fig.align='center'}
+knitr::include_graphics("./img/jacobi_thin_socket.png")
+```
+
+```{r, echo=FALSE, out.width="75%", fig.align='center'}
+knitr::include_graphics("./img/jacobi_thin_node.png")
+```
+
+
+**The model seems quite accurate for the thin node: our data seems to differ of about 3% with respect to the model, expect for the node mapping with 12 process in which it arise up to 5%**.
+
+**Mapping by socket lead a sightly better performance respect core mapping** and this is not what expected by theoretical model.
+**Socket mapping leads to poor communication performance but it exploits better the memory allocation**. When one socket is filled with 12 processes the entire grid is stored on socket competence, but spreading processes across 2 socket lead to better exploit of bandwidth using different memory controller and then all memory channel available. This solver at each iteration elaborates an huge amount of memory, given $L=700$ and $12$ worker at least 250 GB of ram are elaborated and **more than one third of the memory is saturated**.
+
 Also with map-by node option experimentally we obtain better results when several processes are involved.
-The following results report different domain decomposition and binding with $L=1200$, $N=12$ on thin node. Is reported the maximum value over all runs.
+
+```{r, echo=FALSE, out.width="75%", fig.align='center'}
+knitr::include_graphics("./img/jacobi_gpu_core.png")
+```
+
+```{r, echo=FALSE, out.width="75%", fig.align='center'}
+knitr::include_graphics("./img/jacobi_gpu_socket.png")
+```
+
+**For the gpu node, the model doesn't seem quite accurate: data in the socket mapping differs of about 5%, 10%, 33% (using 12, 24, 48 processes respectively) with respect to the model, whilst in the core mapping they do about 10%, 10%, 33%**.
+
+On gpu node differences on socket and core mapping are even bigger: **again we can guess the memory as main cause**. **Gpu node setup even if has higher CPU frequency, doesn't exploit all possible memory channel**. When worker number grow over physical core number the real performance, due hyper-threading, goes dramatically down respect the model. Also the execution time show poor performance with 48 workers.
 
 
 
