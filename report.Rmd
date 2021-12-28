@@ -17,6 +17,7 @@ I have implemented an MPI program in C with $2P$ messages passing among $P$ proc
 The program implements a stream of messages of $4B$ each, both clockwise and anticlockwise: each process in fact send/receive messages of **type int** (the $rank$) with a tag proportional to the rank ( $tag=rank*10$ ).
 
 When running on $P$ process, the program prints out in folder *./out* a file *'np*$P$*.txt'* with the following output ordered by rank (here $P=5$):
+\scriptsize
 
 ```{bash eval=FALSE}
 I am process 0 and I have received 5 messages. My final messages have tag 0 and value msg-left -10, msg-right 10
@@ -25,6 +26,7 @@ I am process 2 and I have received 5 messages. My final messages have tag 20 and
 I am process 3 and I have received 5 messages. My final messages have tag 30 and value msg-left -10, msg-right 10
 I am process 4 and I have received 5 messages. My final messages have tag 40 and value msg-left -10, msg-right 10
 ```
+\normalsize
 
 I have used the following routines for message passing among processes:
 
@@ -225,6 +227,7 @@ Data from node mapping seem to follow another model that is half the expected on
 The **Intel MPI IMB-MPI1 benchmark PingPong** has been used to estimate latency $\lambda_{net}$ and bandwidth $b_{net}$ of *all available combinations of topologies and networks on ORFEO computational nodes, using both IntelMPI and openmpi latest versions* libraries availables.
 
 Let's start by looking at ORFEO computational nodes and resources:
+\scriptsize
 
 ```{bash pbsnodes, eval=FALSE, warning=FALSE }
 [valinsogna@login 2021Assignement01]$ pbsnodes -ajS
@@ -248,6 +251,7 @@ ct1pg-gnode002  free                 1     1      0  252gb/252gb   24/48     0/0
 ct1pg-gnode003  free                 1     1      0  252gb/252gb   24/48     0/0     0/0 56862
 ct1pg-gnode004  free                 0     0      0  252gb/252gb   48/48     0/0     0/0 --
 ```
+\normalsize
 
 On ORFEO there are:
 
@@ -273,6 +277,7 @@ The main differences between a gpu and a thin node are the hyper-threading enabl
 * Intel(R) Xeon(R) Gold 6126 CPU @ **2.60GHz** for thin node
 
 As can be seen by typing `lscpu`:
+\scriptsize
 
 ```{bash lscputhin, eval=FALSE, warning=FALSE}
 [valinsogna@ct1pt-tnode008 ~]$ lscpu
@@ -330,7 +335,7 @@ L3 cache:              19712K
 NUMA node0 CPU(s):     0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46
 NUMA node1 CPU(s):     1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47
 ```
-
+\normalsize
 
 ### Networks and protocols used
 - High Speed Network **100 Gbit InfiniBand**: with $peak$ $perf_{theo}$ of 100 Gbit/s = 12.5 GB/s = **12500 MB/s**;  eq. $(1)$
@@ -343,7 +348,7 @@ Moreover, I am going to test also InfiniBand network performance when applying p
 
 As can be seen from Fig.2, the network cards are placed in each node only inside one of the two NUMA domains, and there are several PCI (Peripherical Component Interconnect) devices that can be seen by typing `ifconfig`:
 
-
+\scriptsize
 ```{bash ifconfig, eval=FALSE }
 [valinsogna@ct1pt-tnode007 ~]$ ifconfig
 bond0: flags=5187<UP,BROADCAST,RUNNING,MASTER,MULTICAST>  mtu 1500
@@ -373,9 +378,11 @@ lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
         inet6 ::1  prefixlen 128  scopeid 0x10<host>
         loop  txqueuelen 1000  (Local Loopback)
 ```
+\normalsize
 
 As from above, **em1, em2 are two physical distinguished Ethernet cards that refers to one interface br0**, whilst **ib0 is InfiniBand**.
 More details are shown below with `lstopo`:
+\scriptsize
 
 ```{bash lstopo2, eval=FALSE }
 [valinsogna@ct1pt-tnode007 ~]$ lstopo
@@ -407,6 +414,7 @@ Machine (754GB total)
           Net "ib0"
           OpenFabrics "mlx5_0"
 ```
+\normalsize
 
 With openMPI implementation and UCX, it's possible to directly select the devices (using `UCX_NET_DEVICES` specification in the run command), that lead to a specific protocol as consequence. **The devices tested with openMPI across nodes are:**
 
@@ -427,6 +435,7 @@ knitr::include_graphics("./img/pingpong.png")
 
 It reports the time $\Delta t/2$ (in $\mu s$), throughput $\frac{2X}{\Delta t}$ (in MB/s), number of repetitions and the message size $X$ (in B) in the standard output:
 
+\scriptsize
 ```{bash eval=FALSE}
 #---------------------------------------------------
 # Benchmarking PingPong 
@@ -439,7 +448,7 @@ It reports the time $\Delta t/2$ (in $\mu s$), throughput $\frac{2X}{\Delta t}$ 
             4,        1000,       0.22,       20.26
             8,        1000,       0.24,       40.59
 ```
-
+\normalsize
 
 ### Measurements
 **The bandwidth and the latency estimation for gpu and thin nodes is done across cores, sockets and nodes**, with different protocols, PCI devices and libraries. 
@@ -768,6 +777,7 @@ $$\frac{\delta \Phi (x_i, y_i)}{\delta t} = \frac{\Phi (x_i+1, y_i)+\Phi (x_i-1,
 In each time step, a correction $\delta \Phi$ to $\Delta \Phi$ at coordinate $(x_i,y_i)$ is calculated using the “old” values from the four next neighbor points. Of course, the updated $\Phi$ values must be written to a second array. After all points have been updated (a “sweep”), the algorithm is repeated till some basic convergence bounded by a threshold $eps$.
 
 The following is a 2D Implementation of the Jacobi algorithm on an N × N lattice, with a convergence criterion added, taken by G.Hager and G.Wellein "Introduction to high performance computing for scientists and engineers":
+\scriptsize
 
 ```{bash eval=FALSE}
 double precision, dimension(0:N+1,0:N+1,0:1) :: phi 
@@ -789,6 +799,7 @@ enddo
     i = t0 ; t0=t1 ; t1=i
 enddo
 ```
+\normalsize
 
 In a parallel computation, the core of the code implementation is similar but:
 
@@ -883,6 +894,7 @@ The Jacobi program was runned on:
 Along with the performance measurements, I took the elapsed time by means of `/usr/bin/time -f "user : %U system: %S elapsed: %e CPU: %P CMD: %C \n"` run command.
 
 The following is an example of running with $L=700$ and $N=(4,1,1)$:
+\scriptsize
 
 ```{bash eval=FALSE}
 # Threadlevel provided:        3 out of        0        1        2        3
@@ -897,22 +909,32 @@ The following is an example of running with $L=700$ and $N=(4,1,1)$:
            1           3           2
 #   0  Allocated 2 arrays with a total of  5535.17      Mbytes 
 # StartResidual    0.00000000000    
-  4  Maxtime , Mintime + JacobiMi , JacobiMa    3.06243716300        3.06242734200        2.98796024800        2.99414415400       Residual    12273333.3238      MLUPs    448.009192344    
-  4  Maxtime , Mintime + JacobiMi , JacobiMa    3.06078858000        3.06078676400        2.98838307400        2.99486265400       Residual    2041666.66667      MLUPs    448.250496282    
-  4  Maxtime , Mintime + JacobiMi , JacobiMa    3.06090752400        3.06090532700        2.98793178100        2.99505510000       Residual    434799.382550      MLUPs    448.233077688    
-  4  Maxtime , Mintime + JacobiMi , JacobiMa    3.06095547000        3.06095308700        2.98808474500        2.99490125800       Residual    129179.526716      MLUPs    448.226056683    
-  4  Maxtime , Mintime + JacobiMi , JacobiMa    3.06516349800        3.06516215100        2.99001243700        2.99797766000       Residual    52905.8427676      MLUPs    447.610706866    
-  4  Maxtime , Mintime + JacobiMi , JacobiMa    3.06256750200        3.06256510400        2.98815335100        2.99561585600       Residual    27258.4295825      MLUPs    447.990125639    
-  4  Maxtime , Mintime + JacobiMi , JacobiMa    3.06197104500        3.06196926100        2.98880531000        2.99486067300       Residual    16225.1238619      MLUPs    448.077391927    
-  4  Maxtime , Mintime + JacobiMi , JacobiMa    3.06272575000        3.06272477100        2.98845891200        2.99545644500       Residual    10594.4563848      MLUPs    447.966978434    
-  4  Maxtime , Mintime + JacobiMi , JacobiMa    3.06178146800        3.06177916200        2.98808213100        2.99487845400       Residual    7372.72712122      MLUPs    448.105135634    
-  4  Maxtime , Mintime + JacobiMi , JacobiMa    3.06086679800        3.06086465500        2.98821124300        2.99498761300       Residual    5375.90215905      MLUPs    448.239041600    
+  4  Maxtime , Mintime + JacobiMi , JacobiMa  3.06243716300  3.06242734200  2.98796024800 2.99414415400
+  Residual 12273333.3238  MLUPs 448.009192344    
+  4  Maxtime , Mintime + JacobiMi , JacobiMa  3.06078858000  3.06078676400  2.98838307400 2.99486265400
+  Residual 2041666.66667  MLUPs 448.250496282    
+  4  Maxtime , Mintime + JacobiMi , JacobiMa  3.06090752400  3.06090532700  2.98793178100 2.99505510000
+  Residual 434799.382550  MLUPs 448.233077688    
+  4  Maxtime , Mintime + JacobiMi , JacobiMa  3.06095547000  3.06095308700  2.98808474500 2.99490125800
+  Residual 129179.526716  MLUPs 448.226056683    
+  4  Maxtime , Mintime + JacobiMi , JacobiMa  3.06516349800  3.06516215100  2.99001243700 2.99797766000
+  Residual 52905.8427676  MLUPs 447.610706866    
+  4  Maxtime , Mintime + JacobiMi , JacobiMa  3.06256750200  3.06256510400  2.98815335100 2.99561585600
+  Residual 27258.4295825  MLUPs 447.990125639    
+  4  Maxtime , Mintime + JacobiMi , JacobiMa  3.06197104500  3.06196926100  2.98880531000 2.99486067300
+  Residual 16225.1238619  MLUPs 448.077391927    
+  4  Maxtime , Mintime + JacobiMi , JacobiMa  3.06272575000  3.06272477100  2.98845891200 2.99545644500
+  Residual 10594.4563848  MLUPs 447.966978434    
+  4  Maxtime , Mintime + JacobiMi , JacobiMa  3.06178146800  3.06177916200  2.98808213100 2.99487845400
+  Residual 7372.72712122  MLUPs 448.105135634    
+  4  Maxtime , Mintime + JacobiMi , JacobiMa  3.06086679800  3.06086465500  2.98821124300 2.99498761300
+  Residual 5375.90215905  MLUPs 448.239041600    
 ```
-
+\normalsize
 
 
 Even if this model seems accurate, some comments are required:
-mapping by socket lead a slighty better performance respect core mapping and this is not what expected by theoretical model.
+mapping by socket lead a sightly better performance respect core mapping and this is not what expected by theoretical model.
 If socket map on one hand lead to poor communication performance on other hand exploit better the memory allocation. When one socket is filled with 12 processes the entire grid is stored on socket competence LRDIMM, but spreading processes across 2 socket lead to better exploit of bandwidth using different memory controller and then all memory channel available. This solver at each iteration elaborates an huge amount of memory, given $L=1200$ and $12$ worker at least 300 GB of ram are elaborated (half memory LRDIMM are saturated,then all single socket channel are used).
 Also with map-by node option experimentally we obtain better results when several processes are involved.
 The following results report different domain decomposition and binding with $L=1200$, $N=12$ on thin node. Is reported the maximum value over all runs.
