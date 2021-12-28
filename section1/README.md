@@ -17,6 +17,21 @@ The results and output files csv/txt are available in the subfolders 'out/' insi
 To clean all the measures of the ring.c program just type:
 - `clean_ring`
 
+## Excercise 1.2 Matrix 3D
+
+The code is in folder *matrix/* with a dedicated Makefile.
+
+Available rules:
+
+- `make default` provide a program that satisfy the assigment requests, only message of correct result is provided from executable. -O3 flag is specified.
+- `make timeit` as previous but each process provide some time output.
+- `make print` resulting code provide some output from each processor that explain how many elements they get and if the result is correct.
+- `make format` code formatter provided by clang.
+- `make clean` remove executable produced The code is tested with openMPI 4.03.
+
+How to run it: 
+- `mpirun -np #nprocs matrix.x #nx #ny #nz`. Total element number must be greater or equalt than processors number. The element are equally distribuited to worker and reminder is assigned in round robin way.
+
 ## Others folder
 
 There are the supported programs used for the ring exercise, like 'formatter.cpp'.
