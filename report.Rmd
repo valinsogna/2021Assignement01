@@ -1,8 +1,8 @@
 ---
 title: "Assignement 1 Report"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -850,10 +850,12 @@ Since we use a **3D Jacobi FORTRAN program (column-major order)**, there are dom
 
 In order to find the best decomposition possible, several tests has been done in order to find the most performing permutation of ($N_x, N_y, N_z$).
 
-**With $N=6$ take $(6,1,1)$ $(1,6,1)$ $(1,1,6)$ decompositions when $L=1200$: experimentally, the first configuration behave better** than the other in terms of MLUP/s (oss. use large values of $L$ to see this effect).
+**With $N=6$ take $(6,1,1)$ $(1,6,1)$ $(1,1,6)$ decompositions when $L=1200$ on a thin node: experimentally, the first configuration behave better** than the other in terms of MLUP/s (oss. use large values of $L$ to see this effect). Example:
 
 ```{r, dpi=600, fig.width=14, fig.height=20,echo=FALSE,eval=TRUE}
-last=read.csv("./jacobi/various.csv")
+#install.packages("kableExtra")
+library(kableExtra)
+last=read.csv("./section3/example.csv")
 last=last[,c("mapping","nx","ny","nz","perf")]
 kbl(last,booktabs=T,escape=F, col.names = linebreak(c("Mapping","Nx","Ny","Nx","MLUP/s")))%>%
 column_spec(1, bold=T) %>%

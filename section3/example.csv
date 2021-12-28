@@ -1,0 +1,7 @@
+mapping,nx,ny,nz,perf
+core,6,1,1,668
+core,1,6,1,665
+core,1,1,6,665
+socket,6,1,1,674
+socket,1,6,1,671
+socket,1,1,6,670
