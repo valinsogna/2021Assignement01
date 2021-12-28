@@ -2,7 +2,7 @@
  
 #PBS -q dssc
 #PBS -l nodes=2:ppn=24
-#PBS -l walltime=0:20:00 
+#PBS -l walltime=0:30:00 
  
 cd $PBS_O_WORKDIR 
 module load openmpi/4.0.3/gnu/9.3.0 
