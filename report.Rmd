@@ -18,11 +18,13 @@ The program implements a stream of messages of $4B$ each, both clockwise and ant
 
 When running on $P$ process, the program prints out in folder *./out* a file *'np*$P$*.txt'* with the following output ordered by rank (here $P=5$):
 
-`I am process 0 and I have received 5 messages. My final messages have tag 0 and value msg-left -10, msg-right 10`
-`I am process 1 and I have received 5 messages. My final messages have tag 10 and value msg-left -10, msg-right 10`
-`I am process 2 and I have received 5 messages. My final messages have tag 20 and value msg-left -10, msg-right 10`
-`I am process 3 and I have received 5 messages. My final messages have tag 30 and value msg-left -10, msg-right 10`
-`I am process 4 and I have received 5 messages. My final messages have tag 40 and value msg-left -10, msg-right 10`
+```{bash eval=FALSE}
+I am process 0 and I have received 5 messages. My final messages have tag 0 and value msg-left -10, msg-right 10
+I am process 1 and I have received 5 messages. My final messages have tag 10 and value msg-left -10, msg-right 10
+I am process 2 and I have received 5 messages. My final messages have tag 20 and value msg-left -10, msg-right 10
+I am process 3 and I have received 5 messages. My final messages have tag 30 and value msg-left -10, msg-right 10
+I am process 4 and I have received 5 messages. My final messages have tag 40 and value msg-left -10, msg-right 10
+```
 
 I have used the following routines for message passing among processes:
 
@@ -755,22 +757,130 @@ knitr::include_graphics("./img/fitted_perf.png")
 ```
 
 # Exercise 3
-## Jacobi solver - Performance model
-In order to predict Jacobi model performance the following model is used:
-$$P(L,N)=\frac{L^3N}{T_s+T_c}\space [MLUP/s]$$
-$L$ represent sub domain size (assuming it as cube), for us it is a constant. $N$ represent the processes number. The $L^3N$ quantity thus is considered the problem size, this amount of work is increased linearly in function of $N$, this is a weak scalability. About measure unit: performance is evaluated using $MLUP/s$, mega lactic update per sec.
+## Jacobi solver
+It's a prototype for as stencil-based iterative method used in numerical analysis to solve partial differential equations.
 
-$T_s$ is time swept, is constant and can be estimated using the serial output.
+In its most straightforward form, it can be used for solving the diffusion equation for a scalar function $\Phi (r,t)$:
 
-$T_c$ represent the communication time in seconds. This quantity can be modeled simple estimating the latency $\lambda$, bandwidth $B$ and messages size $C$.
+$$\frac{\delta \Phi}{\delta t} = \Delta \Phi$$
+on a rectangular lattice subject to Dirichlet boundary conditions. The differential operators are discretized using finite differences:
+$$\frac{\delta \Phi (x_i, y_i)}{\delta t} = \frac{\Phi (x_i+1, y_i)+\Phi (x_i-1, y_i)-2\Phi (x_i, y_i)}{\delta x^2} + \frac{\Phi (x_i+1, y_i+1)+\Phi (x_i, y_i-1)-2\Phi (x_i, y_i)}{\delta y^2}$$
+In each time step, a correction $\delta \Phi$ to $\Delta \Phi$ at coordinate $(x_i,y_i)$ is calculated using the “old” values from the four next neighbor points. Of course, the updated $\Phi$ values must be written to a second array. After all points have been updated (a “sweep”), the algorithm is repeated till some basic convergence bounded by a threshold $eps$.
 
-$$T_c=\frac{C}{B}+4k\lambda\space[seconds]$$
-About $C$,assuming grid point as double:
-$$C=L^2k\cdot2\cdot2\cdot8\space[byte]$$
-About $k$: this quantity represent the number of directions in which the halo exchange occurs, it must be multiplied by $2$ taking into account the bidirectional halo exchange and again by two taking into account the positive and negative direction.
+The following is a 2D Implementation of the Jacobi algorithm on an N × N lattice, with a convergence criterion added, taken by G.Hager and G.Wellein "Introduction to high performance computing for scientists and engineers":
+
+```{bash eval=FALSE}
+double precision, dimension(0:N+1,0:N+1,0:1) :: phi 
+double precision :: maxdelta,eps
+  integer :: t0,t1
+  eps = 1.d-14 ! convergence threshold 
+  t0=0;t1=1
+  maxdelta = 2.d0*eps
+  do while(maxdelta.gt.eps)
+  maxdelta = 0.d0
+do k = 1,N
+  do i = 1,N
+    phi(i,k,t1) = ( phi(i+1,k,t0) + phi(i-1,k,t0)
+               + phi(i,k+1,t0) + phi(i,k-1,t0) ) * 0.25
+    maxdelta = max(maxdelta,abs(phi(i,k,t1)-phi(i,k,t0)))
+enddo 
+  enddo
+! swap arrays
+    i = t0 ; t0=t1 ; t1=i
+enddo
+```
+
+In a parallel computation, the core of the code implementation is similar but:
+
+- convergence criterion needs to be computed globally (collective reduce operations)
+- boundary layers must retrieve info form adjacent subdomains (halo layers exchange) in order to update their values.
+
+For this exercise, we used as **Jacobi solver 3D program given by the professor Cozzini written in FORTRAN**.
+
+## Performance model
+In order to predict 3D Jacobi model performance $P$ the following model has been used:
+\begin{equation}
+\tag{*}
+P(L,N)=\frac{L^3N}{T_s(L)+T_c(L,N)}\space \bigg[ \frac{MLUP}{s} \bigg]
+\end{equation}
+where:
+
+* $L$ is the subdomain size, assuming it's a cube..
+* $N= N_x N_y N_z$ is the number of the processes involved. 
+* $L^3N$ is the problem size. The amount of work, therefore, increase linearly as a function of $N$; hence a weak scalability will be considered. 
+* $MLUP/s$ is the unit for measuring this performance (Mega Lactice Updates Per sec).
+* $T_s$ is the time for an entire sweep, thus it can estimated using the program as serial.
+* $T_c$ represent the communication time for total halo exchanges. 
+
+
+The latter is modeled by simply estimating the latency $\lambda$, bandwidth $b$ of the network and messages size $c$.
+
+In a 3D problem, the number of points used to estimate a point of the subdomain is not 4 (5 stencil case) but 6 instead (7 stencil case). When processes communicates whit each other they simultaneously sends each of the 6 point-to-point communication at the same time, so we need to consider full duplex data transfer for bandwidth.
+
+Moreover we assume that the time for copying the halo to/from an intermediate buffer and the communication of a process with itself come at no costs.
+$T_c$ then can be model as:
+
+\begin{equation}
+\tag{**}
+T_c(L,N)=\frac{c(L)}{b}+k\lambda\space [s]
+\end{equation}
+
+where:
+
+* $c(L)$ is the amount of data volume transferred over a node's network link.
+* $b$ is the bidirectional bandwith of the network link
+* $\lambda$ is the latency
+* k is the largest number of coordinate directions in which $N_i > 1$.
+
+Then $c$ is, :
+\begin{equation}
+\tag{***}
+c(L)=L^2k\cdot2\cdot8\space [B]
+\end{equation}
+
+where:
+
+* $k$ represents the number of directions in which the halo exchange occurs.
+* $L^2$ is the halo surface to transmit.
+* $2$ is for taking into account the bidirectional halo exchange.
+* $8$ is for double conversion, assuming that the grid points in the subdomain are double floating points.
 
 ## Domain decomposition
+Since we use a **3D Jacobi FORTRAN program (column-major order)**, there are domains decomposition that are more suitable than others when dealing with contiguous location in memory for halo exchange. 
 
-Several domain decompositions are possible, a priory some of them can be discarded assuming poor performance due buffering, as example between $(12,1,1)$ $(1,12,1)$ $(1,1,12)$, the first one is the better and more memory friendly decomposition, it has the lowest buffering needs. This can be proved experimentally, the first configuration behave better than the other in terms of MLUP/s.
+In order to find the best decomposition possible, several tests has been done in order to find the most performing permutation of ($N_x, N_y, N_z$).
+
+**With $N=6$ take $(6,1,1)$ $(1,6,1)$ $(1,1,6)$ decompositions when $L=1200$: experimentally, the first configuration behave better** than the other in terms of MLUP/s (oss. use large values of $L$ to see this effect).
+
+```{r, dpi=600, fig.width=14, fig.height=20,echo=FALSE,eval=TRUE}
+last=read.csv("./jacobi/various.csv")
+last=last[,c("mapping","nx","ny","nz","perf")]
+kbl(last,booktabs=T,escape=F, col.names = linebreak(c("Mapping","Nx","Ny","Nx","MLUP/s")))%>%
+column_spec(1, bold=T) %>%
+collapse_rows(columns = 1:1, latex_hline = "major", valign = "middle")
+```
+
+**Instead when comparing always with $N=6$, $(6,1,1)$ and $(3,2,1)$ the first has more buffering cost involved but the latter has more halo exchanges, thus both the two configurations will be taken into account**.
+
+## Results
+As a first step I have tried to **compile and run the code on single processor of a thin and gpu node to estimate the serial time on one single core $T_s$**.
+
+I have used **OpenMPI implementation on ORFEO both on thin and gpu nodes** using native IB protocol.
+
+The **size of the subdomain $L=700$ was fixed and used both for gpu and thin** measurements since, due to RAM size on the gpu node (see `pbsnodes -ajS` in Exercise 2), it corrisponds to the maximum amount of memory availble for comparison between the two different nodes.
+
+The Jacobi program was runned on:
+
+* 4/8/12 processes within the same thin node pinning the MPI processes within the same socket. 
+* 4/8/12 processes within the same thin node pinning the MPI processes across two sockets.
+* 12/24/48 processes using two thin nodes.
+* 12/24/48 processes using two gpu nodes (hyperthreading is enabled).
+
+Even if this model seems accurate, some comments are required:
+mapping by socket lead a slighty better performance respect core mapping and this is not what expected by theoretical model.
+If socket map on one hand lead to poor communication performance on other hand exploit better the memory allocation. When one socket is filled with 12 processes the entire grid is stored on socket competence LRDIMM, but spreading processes across 2 socket lead to better exploit of bandwidth using different memory controller and then all memory channel available. This solver at each iteration elaborates an huge amount of memory, given $L=1200$ and $12$ worker at least 300 GB of ram are elaborated (half memory LRDIMM are saturated,then all single socket channel are used).
+Also with map-by node option experimentally we obtain better results when several processes are involved.
+The following results report different domain decomposition and binding with $L=1200$, $N=12$ on thin node. Is reported the maximum value over all runs.
+
 
 
