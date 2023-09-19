@@ -20,8 +20,8 @@ Ensure that you have the latest version of OpenMPI (tested on openmpi-4.1.1+gnu-
 ```bash
 mpicc ring.c -o ring
 mpirun -np [NUMBER_OF_PROCESSES] ./ring
-Check the ./out folder for the output files.
-`
+# Check the ./out folder for the output files.
+```
 
 ## Exercise 1.2: Measure MPI Point-to-Point Performance
 ### Description:
